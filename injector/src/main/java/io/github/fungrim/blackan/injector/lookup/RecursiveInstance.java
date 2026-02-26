@@ -141,7 +141,7 @@ public class RecursiveInstance implements LimitedInstance {
             public Iterator<T> iterator() {
                 return StreamSupport.stream(
                         Spliterators.spliteratorUnknownSize(candidates(), Spliterator.ORDERED),
-                        false).map(c -> RecursiveInstance.this.get(type)).iterator();
+                        false).map(c -> providerFactory.create(c, type).get()).iterator();
             }
 
             @Override

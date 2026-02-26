@@ -1,12 +1,15 @@
 package io.github.fungrim.blackan.injector;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -16,12 +19,18 @@ import org.junit.jupiter.api.Test;
 
 import io.github.fungrim.blackan.injector.context.RootContext;
 import io.github.fungrim.blackan.injector.creator.ConstructionException;
+import io.github.fungrim.blackan.injector.util.stubs.AmbiguousInstanceBean;
 import io.github.fungrim.blackan.injector.util.stubs.AppGreeting;
 import io.github.fungrim.blackan.injector.util.stubs.AppService;
+import io.github.fungrim.blackan.injector.util.stubs.AuditService;
+import io.github.fungrim.blackan.injector.util.stubs.EmailNotificationService;
 import io.github.fungrim.blackan.injector.util.stubs.GenericInjectionBean;
 import io.github.fungrim.blackan.injector.util.stubs.Greeting;
 import io.github.fungrim.blackan.injector.util.stubs.IllegalAppBean;
 import io.github.fungrim.blackan.injector.util.stubs.ListProducer;
+import io.github.fungrim.blackan.injector.util.stubs.NonResolvableBean;
+import io.github.fungrim.blackan.injector.util.stubs.NonResolvableProviderBean;
+import io.github.fungrim.blackan.injector.util.stubs.NotificationService;
 import io.github.fungrim.blackan.injector.util.stubs.RequestHandler;
 import io.github.fungrim.blackan.injector.util.stubs.RequestInfo;
 import io.github.fungrim.blackan.injector.util.stubs.RequestInfoImpl;
@@ -30,6 +39,8 @@ import io.github.fungrim.blackan.injector.util.stubs.SessionDataImpl;
 import io.github.fungrim.blackan.injector.util.stubs.SessionService;
 import io.github.fungrim.blackan.injector.util.stubs.SessionWithInstanceBean;
 import io.github.fungrim.blackan.injector.util.stubs.SessionWithProviderBean;
+import io.github.fungrim.blackan.injector.util.stubs.SmsNotificationService;
+import io.github.fungrim.blackan.injector.util.stubs.UnsatisfiedInstanceBean;
 
 class ContextTest {
 
@@ -56,7 +67,15 @@ class ContextTest {
                         SessionWithProviderBean.class,
                         SessionWithInstanceBean.class,
                         ListProducer.class,
-                        GenericInjectionBean.class))
+                        GenericInjectionBean.class,
+                        NotificationService.class,
+                        EmailNotificationService.class,
+                        SmsNotificationService.class,
+                        AuditService.class,
+                        NonResolvableBean.class,
+                        NonResolvableProviderBean.class,
+                        AmbiguousInstanceBean.class,
+                        UnsatisfiedInstanceBean.class))
                 .withScopeProvider(() -> currentContext.get())
                 .build();
         currentContext.set(root);
@@ -420,6 +439,52 @@ class ContextTest {
             GenericInjectionBean bean = root.get(GenericInjectionBean.class);
             assertNotNull(bean.greetingList);
             assertEquals(List.of("hello from app", "HELLO FROM APP"), bean.greetingList);
+        }
+    }
+
+    @Nested
+    class UnsatisfiedAndAmbiguousResolution {
+
+        @Test
+        void cannotInjectNonResolvableBean() {
+            currentContext.set(root);
+            assertThrows(ConstructionException.class,
+                    () -> root.get(NonResolvableBean.class));
+        }
+
+        @Test
+        void cannotInjectProviderOfNonResolvableBean() {
+            currentContext.set(root);
+            NonResolvableProviderBean bean = root.get(NonResolvableProviderBean.class);
+            assertNotNull(bean.auditServiceProvider);
+            assertThrows(Exception.class,
+                    () -> bean.auditServiceProvider.get());
+        }
+
+        @Test
+        void canInjectAmbiguousInstanceAndIterateAllCandidates() {
+            currentContext.set(root);
+            AmbiguousInstanceBean bean = root.get(AmbiguousInstanceBean.class);
+            assertNotNull(bean.notificationServices);
+            assertTrue(bean.notificationServices.isAmbiguous());
+            assertFalse(bean.notificationServices.isUnsatisfied());
+
+            List<String> results = new ArrayList<>();
+            for (NotificationService service : bean.notificationServices) {
+                results.add(service.notify("hello"));
+            }
+            assertEquals(2, results.size());
+            assertTrue(results.contains("email: hello"));
+            assertTrue(results.contains("sms: hello"));
+        }
+
+        @Test
+        void canInjectUnsatisfiedInstanceAndCheckIsUnsatisfied() {
+            currentContext.set(root);
+            UnsatisfiedInstanceBean bean = root.get(UnsatisfiedInstanceBean.class);
+            assertNotNull(bean.auditServiceInstance);
+            assertTrue(bean.auditServiceInstance.isUnsatisfied());
+            assertFalse(bean.auditServiceInstance.isAmbiguous());
         }
     }
 }
