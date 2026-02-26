@@ -18,8 +18,10 @@ import io.github.fungrim.blackan.injector.context.RootContext;
 import io.github.fungrim.blackan.injector.creator.ConstructionException;
 import io.github.fungrim.blackan.injector.util.stubs.AppGreeting;
 import io.github.fungrim.blackan.injector.util.stubs.AppService;
+import io.github.fungrim.blackan.injector.util.stubs.GenericInjectionBean;
 import io.github.fungrim.blackan.injector.util.stubs.Greeting;
 import io.github.fungrim.blackan.injector.util.stubs.IllegalAppBean;
+import io.github.fungrim.blackan.injector.util.stubs.ListProducer;
 import io.github.fungrim.blackan.injector.util.stubs.RequestHandler;
 import io.github.fungrim.blackan.injector.util.stubs.RequestInfo;
 import io.github.fungrim.blackan.injector.util.stubs.RequestInfoImpl;
@@ -52,7 +54,9 @@ class ContextTest {
                         RequestHandler.class,
                         IllegalAppBean.class,
                         SessionWithProviderBean.class,
-                        SessionWithInstanceBean.class))
+                        SessionWithInstanceBean.class,
+                        ListProducer.class,
+                        GenericInjectionBean.class))
                 .withScopeProvider(() -> currentContext.get())
                 .build();
         currentContext.set(root);
@@ -358,6 +362,64 @@ class ContextTest {
             RequestInfo info = bean.requestInfoInstance.get();
             assertNotNull(info);
             assertNotNull(info.getRequestId());
+        }
+    }
+
+    @Nested
+    class GenericTypeInjection {
+
+        @Test
+        void injectsListOfStrings() {
+            currentContext.set(root);
+            GenericInjectionBean bean = root.get(GenericInjectionBean.class);
+            assertNotNull(bean.stringList);
+            assertEquals(List.of("alpha", "beta", "gamma"), bean.stringList);
+        }
+
+        @Test
+        void injectsListOfIntegers() {
+            currentContext.set(root);
+            GenericInjectionBean bean = root.get(GenericInjectionBean.class);
+            assertNotNull(bean.integerList);
+            assertEquals(List.of(1, 2, 3), bean.integerList);
+        }
+
+        @Test
+        void listOfStringIsNotSameAsListOfInteger() {
+            currentContext.set(root);
+            GenericInjectionBean bean = root.get(GenericInjectionBean.class);
+            assertNotSame(bean.stringList, bean.integerList);
+        }
+
+        @Test
+        void namedListOfIntegerIsDifferentFromUnqualifiedListOfInteger() {
+            currentContext.set(root);
+            GenericInjectionBean bean = root.get(GenericInjectionBean.class);
+            assertNotNull(bean.productionIntegerList);
+            assertEquals(List.of(100, 200, 300), bean.productionIntegerList);
+            assertNotSame(bean.integerList, bean.productionIntegerList);
+        }
+
+        @Test
+        void unqualifiedListOfIntegerHasExpectedValues() {
+            currentContext.set(root);
+            GenericInjectionBean bean = root.get(GenericInjectionBean.class);
+            assertEquals(List.of(1, 2, 3), bean.integerList);
+        }
+
+        @Test
+        void namedListOfIntegerHasExpectedValues() {
+            currentContext.set(root);
+            GenericInjectionBean bean = root.get(GenericInjectionBean.class);
+            assertEquals(List.of(100, 200, 300), bean.productionIntegerList);
+        }
+
+        @Test
+        void producerMethodResolvesArgumentsFromContext() {
+            currentContext.set(root);
+            GenericInjectionBean bean = root.get(GenericInjectionBean.class);
+            assertNotNull(bean.greetingList);
+            assertEquals(List.of("hello from app", "HELLO FROM APP"), bean.greetingList);
         }
     }
 }

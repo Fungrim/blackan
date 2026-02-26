@@ -3,6 +3,7 @@ package io.github.fungrim.blackan.injector.context;
 import java.io.IOException;
 import java.util.List;
 
+import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.Index;
 import org.jboss.jandex.Indexer;
 
@@ -14,6 +15,18 @@ public class RootContext extends ContextImpl {
 
     private RootContext(Index index, Scope scope, ClassLoader classLoader, ProcessScopeProvider scopeProvider) {
         super(index, null, scope, classLoader, scopeProvider);
+        scanProducers();
+    }
+
+    private void scanProducers() {
+        for (ClassInfo classInfo : index.getKnownClasses()) {
+            try {
+                Class<?> clazz = classLoader.loadClass(classInfo.name().toString());
+                producerRegistry.scan(this, clazz);
+            } catch (ClassNotFoundException e) {
+                // skip classes that can't be loaded
+            }
+        }
     }
 
     public static class Builder {

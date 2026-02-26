@@ -12,6 +12,7 @@ import io.github.fungrim.blackan.injector.context.ProcessScopeProvider;
 import io.github.fungrim.blackan.injector.context.RootContext;
 import io.github.fungrim.blackan.injector.creator.ConstructionException;
 import io.github.fungrim.blackan.injector.lookup.LimitedInstance;
+import io.github.fungrim.blackan.injector.producer.ProducerRegistry;
 
 public interface Context {
 
@@ -78,6 +79,8 @@ public interface Context {
     ClassLoader classLoader();
 
     ProcessScopeProvider processScopeProvider();
+
+    ProducerRegistry producerRegistry();
 
     Optional<ClassAccess> findClass(DotName name);
 

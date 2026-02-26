@@ -1,12 +1,15 @@
 package io.github.fungrim.blackan.injector.creator;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.Optional;
 
 import org.jboss.jandex.DotName;
 
 import io.github.fungrim.blackan.injector.Context;
 import io.github.fungrim.blackan.injector.lookup.RecursionKey;
+import io.github.fungrim.blackan.injector.producer.ProducerKey;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Provider;
 import lombok.AccessLevel;
@@ -35,6 +38,14 @@ public class InvocationUtil {
             Class<Object> typeArg = (Class<Object>) extractTypeArgument(genericType);
             DotName typeName = DotName.createSimple(typeArg);
             return new SubScopeProvider<>(context.processScopeProvider(), typeName, typeArg);
+        }
+        if (genericType instanceof ParameterizedType) {
+            Annotation[] qualifiers = key.qualifiers().toArray(new Annotation[0]);
+            ProducerKey producerKey = ProducerKey.of(genericType, qualifiers);
+            Optional<Provider<Object>> producer = context.producerRegistry().find(producerKey);
+            if (producer.isPresent()) {
+                return producer.get().get();
+            }
         }
         return context.getInstance(key.type()).get(context.loadClass(key.type()));
     }

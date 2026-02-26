@@ -19,6 +19,7 @@ import io.github.fungrim.blackan.injector.lookup.CachingInstanceFactory;
 import io.github.fungrim.blackan.injector.lookup.InstanceFactory;
 import io.github.fungrim.blackan.injector.lookup.LimitedInstance;
 import io.github.fungrim.blackan.injector.lookup.RecursionKey;
+import io.github.fungrim.blackan.injector.producer.ProducerRegistry;
 
 public class ContextImpl implements Context {
 
@@ -29,12 +30,18 @@ public class ContextImpl implements Context {
     protected final Scope scope;
     protected final ClassLoader classLoader;
     protected final ProcessScopeProvider scopeProvider;
+    protected final ProducerRegistry producerRegistry;
 
     public ContextImpl(Index index, Context parent, Scope scope, ClassLoader classLoader, ProcessScopeProvider scopeProvider) {
+        this(index, parent, scope, classLoader, scopeProvider, parent != null ? parent.producerRegistry() : new ProducerRegistry());
+    }
+
+    public ContextImpl(Index index, Context parent, Scope scope, ClassLoader classLoader, ProcessScopeProvider scopeProvider, ProducerRegistry producerRegistry) {
         this.index = index;
         this.parent = parent;
         this.scope = scope;
         this.classLoader = classLoader;
+        this.producerRegistry = producerRegistry;
         if(scopeProvider == null) {
             this.scopeProvider = () -> this;
         } else {
@@ -67,6 +74,11 @@ public class ContextImpl implements Context {
     @Override
     public ProcessScopeProvider processScopeProvider() {
         return scopeProvider;
+    }
+
+    @Override
+    public ProducerRegistry producerRegistry() {
+        return producerRegistry;
     }
 
     @Override
