@@ -23,6 +23,12 @@ import io.github.fungrim.blackan.injector.util.stubs.AmbiguousInstanceBean;
 import io.github.fungrim.blackan.injector.util.stubs.AppGreeting;
 import io.github.fungrim.blackan.injector.util.stubs.AppService;
 import io.github.fungrim.blackan.injector.util.stubs.AuditService;
+import io.github.fungrim.blackan.injector.util.stubs.CircularConstructorA;
+import io.github.fungrim.blackan.injector.util.stubs.CircularConstructorB;
+import io.github.fungrim.blackan.injector.util.stubs.CircularFieldA;
+import io.github.fungrim.blackan.injector.util.stubs.CircularFieldB;
+import io.github.fungrim.blackan.injector.util.stubs.CircularProviderA;
+import io.github.fungrim.blackan.injector.util.stubs.CircularProviderB;
 import io.github.fungrim.blackan.injector.util.stubs.EmailNotificationService;
 import io.github.fungrim.blackan.injector.util.stubs.GenericInjectionBean;
 import io.github.fungrim.blackan.injector.util.stubs.Greeting;
@@ -75,7 +81,13 @@ class ContextTest {
                         NonResolvableBean.class,
                         NonResolvableProviderBean.class,
                         AmbiguousInstanceBean.class,
-                        UnsatisfiedInstanceBean.class))
+                        UnsatisfiedInstanceBean.class,
+                        CircularFieldA.class,
+                        CircularFieldB.class,
+                        CircularConstructorA.class,
+                        CircularConstructorB.class,
+                        CircularProviderA.class,
+                        CircularProviderB.class))
                 .withScopeProvider(() -> currentContext.get())
                 .build();
         currentContext.set(root);
@@ -485,6 +497,41 @@ class ContextTest {
             assertNotNull(bean.auditServiceInstance);
             assertTrue(bean.auditServiceInstance.isUnsatisfied());
             assertFalse(bean.auditServiceInstance.isAmbiguous());
+        }
+    }
+
+    @Nested
+    class CircularDependencyDetection {
+
+        @Test
+        void circularFieldInjectionIsDetected() {
+            currentContext.set(root);
+            assertThrows(ConstructionException.class,
+                    () -> root.get(CircularFieldA.class));
+        }
+
+        @Test
+        void circularConstructorInjectionIsDetected() {
+            currentContext.set(root);
+            assertThrows(ConstructionException.class,
+                    () -> root.get(CircularConstructorA.class));
+        }
+
+        @Test
+        void circularDependencyViaProviderIsAllowed() {
+            currentContext.set(root);
+            CircularProviderA a = root.get(CircularProviderA.class);
+            assertNotNull(a);
+            assertNotNull(a.providerB);
+
+            CircularProviderB b = a.providerB.get();
+            assertNotNull(b);
+            assertEquals("B", b.value());
+
+            CircularProviderA backToA = b.providerA.get();
+            assertNotNull(backToA);
+            assertEquals("A", backToA.value());
+            assertSame(a, backToA);
         }
     }
 }
