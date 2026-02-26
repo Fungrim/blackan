@@ -1,0 +1,363 @@
+package io.github.fungrim.blackan.injector;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+
+import io.github.fungrim.blackan.injector.context.RootContext;
+import io.github.fungrim.blackan.injector.creator.ConstructionException;
+import io.github.fungrim.blackan.injector.util.stubs.AppGreeting;
+import io.github.fungrim.blackan.injector.util.stubs.AppService;
+import io.github.fungrim.blackan.injector.util.stubs.Greeting;
+import io.github.fungrim.blackan.injector.util.stubs.IllegalAppBean;
+import io.github.fungrim.blackan.injector.util.stubs.RequestHandler;
+import io.github.fungrim.blackan.injector.util.stubs.RequestInfo;
+import io.github.fungrim.blackan.injector.util.stubs.RequestInfoImpl;
+import io.github.fungrim.blackan.injector.util.stubs.SessionData;
+import io.github.fungrim.blackan.injector.util.stubs.SessionDataImpl;
+import io.github.fungrim.blackan.injector.util.stubs.SessionService;
+import io.github.fungrim.blackan.injector.util.stubs.SessionWithInstanceBean;
+import io.github.fungrim.blackan.injector.util.stubs.SessionWithProviderBean;
+
+class ContextTest {
+
+    private final AtomicReference<Context> currentContext = new AtomicReference<>();
+
+    private RootContext root;
+
+    @BeforeEach
+    void setup() throws IOException {
+        SessionDataImpl.resetCounter();
+        RequestInfoImpl.resetCounter();
+        root = RootContext.builder()
+                .withClasses(List.of(
+                        Greeting.class,
+                        AppGreeting.class,
+                        SessionData.class,
+                        SessionDataImpl.class,
+                        RequestInfo.class,
+                        RequestInfoImpl.class,
+                        AppService.class,
+                        SessionService.class,
+                        RequestHandler.class,
+                        IllegalAppBean.class,
+                        SessionWithProviderBean.class,
+                        SessionWithInstanceBean.class))
+                .withScopeProvider(() -> currentContext.get())
+                .build();
+        currentContext.set(root);
+    }
+
+    @Nested
+    class ApplicationScope {
+
+        @Test
+        void resolvesAppScopedBeanViaInterface() {
+            currentContext.set(root);
+            Greeting greeting = root.get(Greeting.class);
+            assertNotNull(greeting);
+            assertEquals("hello from app", greeting.greet());
+        }
+
+        @Test
+        void appScopedBeanIsCachedAsSingleton() {
+            currentContext.set(root);
+            Greeting first = root.get(Greeting.class);
+            Greeting second = root.get(Greeting.class);
+            assertSame(first, second);
+        }
+
+        @Test
+        void appServiceGetsGreetingInjected() {
+            currentContext.set(root);
+            AppService service = root.get(AppService.class);
+            assertNotNull(service);
+            assertNotNull(service.greeting);
+            assertEquals("hello from app", service.hello());
+        }
+    }
+
+    @Nested
+    class SessionScope {
+
+        @Test
+        void sessionScopedBeanResolvedInSessionContext() {
+            Context session = root.subcontext(Scope.SESSION);
+            currentContext.set(session);
+            SessionData data = session.get(SessionData.class);
+            assertNotNull(data);
+            assertNotNull(data.getSessionId());
+        }
+
+        @Test
+        void sessionScopedBeanIsCachedWithinSameSession() {
+            Context session = root.subcontext(Scope.SESSION);
+            currentContext.set(session);
+            SessionData first = session.get(SessionData.class);
+            SessionData second = session.get(SessionData.class);
+            assertSame(first, second);
+        }
+
+        @Test
+        void differentSessionsGetDifferentBeans() {
+            Context session1 = root.subcontext(Scope.SESSION);
+            currentContext.set(session1);
+            SessionData data1 = session1.get(SessionData.class);
+
+            Context session2 = root.subcontext(Scope.SESSION);
+            currentContext.set(session2);
+            SessionData data2 = session2.get(SessionData.class);
+
+            assertNotSame(data1, data2);
+            assertNotSame(data1.getSessionId(), data2.getSessionId());
+        }
+
+        @Test
+        void sessionServiceGetsAppScopedGreetingInjected() {
+            Context session = root.subcontext(Scope.SESSION);
+            currentContext.set(session);
+            SessionService service = session.get(SessionService.class);
+            assertNotNull(service);
+            assertNotNull(service.greeting);
+            assertEquals("hello from app", service.greeting.greet());
+        }
+
+        @Test
+        void sessionServiceGetsSameSessionData() {
+            Context session = root.subcontext(Scope.SESSION);
+            currentContext.set(session);
+            SessionService service = session.get(SessionService.class);
+            assertNotNull(service.sessionData);
+            SessionData directData = session.get(SessionData.class);
+            assertSame(service.sessionData, directData);
+        }
+    }
+
+    @Nested
+    class RequestScope {
+
+        @Test
+        void requestScopedBeanResolvedInRequestContext() {
+            Context session = root.subcontext(Scope.SESSION);
+            Context request = session.subcontext(Scope.REQUEST);
+            currentContext.set(request);
+            RequestInfo info = request.get(RequestInfo.class);
+            assertNotNull(info);
+            assertNotNull(info.getRequestId());
+        }
+
+        @Test
+        void requestScopedBeanIsCachedWithinSameRequest() {
+            Context session = root.subcontext(Scope.SESSION);
+            Context request = session.subcontext(Scope.REQUEST);
+            currentContext.set(request);
+            RequestInfo first = request.get(RequestInfo.class);
+            RequestInfo second = request.get(RequestInfo.class);
+            assertSame(first, second);
+        }
+
+        @Test
+        void differentRequestsGetDifferentBeans() {
+            Context session = root.subcontext(Scope.SESSION);
+
+            Context request1 = session.subcontext(Scope.REQUEST);
+            currentContext.set(request1);
+            RequestInfo info1 = request1.get(RequestInfo.class);
+
+            Context request2 = session.subcontext(Scope.REQUEST);
+            currentContext.set(request2);
+            RequestInfo info2 = request2.get(RequestInfo.class);
+
+            assertNotSame(info1, info2);
+        }
+
+        @Test
+        void requestHandlerGetsAllDependenciesInjected() {
+            Context session = root.subcontext(Scope.SESSION);
+            Context request = session.subcontext(Scope.REQUEST);
+            currentContext.set(request);
+            RequestHandler handler = request.get(RequestHandler.class);
+            assertNotNull(handler);
+            assertNotNull(handler.requestInfo);
+            assertNotNull(handler.sessionData);
+            assertNotNull(handler.greeting);
+            assertEquals("hello from app", handler.greeting.greet());
+        }
+
+        @Test
+        void requestsInSameSessionShareSessionData() {
+            Context session = root.subcontext(Scope.SESSION);
+
+            Context request1 = session.subcontext(Scope.REQUEST);
+            currentContext.set(request1);
+            RequestHandler handler1 = request1.get(RequestHandler.class);
+
+            Context request2 = session.subcontext(Scope.REQUEST);
+            currentContext.set(request2);
+            RequestHandler handler2 = request2.get(RequestHandler.class);
+
+            assertSame(handler1.sessionData, handler2.sessionData);
+            assertNotSame(handler1.requestInfo, handler2.requestInfo);
+        }
+    }
+
+    @Nested
+    class CrossScopeInjection {
+
+        @Test
+        void cannotInjectRequestScopedIntoAppScope() {
+            currentContext.set(root);
+            assertThrows(ConstructionException.class,
+                    () -> root.get(IllegalAppBean.class));
+        }
+
+        @Test
+        void canInjectAppScopedIntoSessionScope() {
+            Context session = root.subcontext(Scope.SESSION);
+            currentContext.set(session);
+            SessionService service = session.get(SessionService.class);
+            assertNotNull(service.greeting);
+        }
+
+        @Test
+        void canInjectAppScopedIntoRequestScope() {
+            Context session = root.subcontext(Scope.SESSION);
+            Context request = session.subcontext(Scope.REQUEST);
+            currentContext.set(request);
+            RequestHandler handler = request.get(RequestHandler.class);
+            assertNotNull(handler.greeting);
+            assertEquals("hello from app", handler.greeting.greet());
+        }
+
+        @Test
+        void canInjectSessionScopedIntoRequestScope() {
+            Context session = root.subcontext(Scope.SESSION);
+            Context request = session.subcontext(Scope.REQUEST);
+            currentContext.set(request);
+            RequestHandler handler = request.get(RequestHandler.class);
+            assertNotNull(handler.sessionData);
+        }
+
+        @Test
+        void appScopedBeanIsSameAcrossAllContexts() {
+            Context session = root.subcontext(Scope.SESSION);
+            Context request = session.subcontext(Scope.REQUEST);
+
+            currentContext.set(root);
+            Greeting fromApp = root.get(Greeting.class);
+
+            currentContext.set(session);
+            SessionService sessionService = session.get(SessionService.class);
+
+            currentContext.set(request);
+            RequestHandler handler = request.get(RequestHandler.class);
+
+            assertSame(fromApp, sessionService.greeting);
+            assertSame(fromApp, handler.greeting);
+        }
+    }
+
+    @Nested
+    class ProviderAndInstanceInjection {
+
+        @Test
+        void canGetProviderForRequestScopedFromSessionContext() {
+            Context session = root.subcontext(Scope.SESSION);
+            Context request = session.subcontext(Scope.REQUEST);
+            currentContext.set(request);
+            var provider = request.getInstance(RequestInfo.class).toProvider(RequestInfo.class);
+            assertNotNull(provider);
+            RequestInfo info = provider.get();
+            assertNotNull(info);
+        }
+
+        @Test
+        void canGetInstanceForRequestScopedFromSessionContext() {
+            Context session = root.subcontext(Scope.SESSION);
+            Context request = session.subcontext(Scope.REQUEST);
+            currentContext.set(request);
+            var instance = request.getInstance(RequestInfo.class).toInstance(RequestInfo.class);
+            assertNotNull(instance);
+            assertNotNull(instance.get());
+        }
+
+        @Test
+        void providerCreatesNewDependentEachCall() {
+            Context session = root.subcontext(Scope.SESSION);
+            Context request = session.subcontext(Scope.REQUEST);
+            currentContext.set(request);
+            var provider = request.getInstance(RequestInfo.class).toProvider(RequestInfo.class);
+            RequestInfo first = provider.get();
+            RequestInfo second = provider.get();
+            assertSame(first, second);
+        }
+
+        @Test
+        void sessionBeanCanInjectProviderOfRequestScoped() {
+            Context session = root.subcontext(Scope.SESSION);
+            currentContext.set(session);
+            SessionWithProviderBean bean = session.get(SessionWithProviderBean.class);
+            assertNotNull(bean.requestInfoProvider);
+
+            Context request = session.subcontext(Scope.REQUEST);
+            currentContext.set(request);
+            RequestInfo info = bean.requestInfoProvider.get();
+            assertNotNull(info);
+            assertNotNull(info.getRequestId());
+        }
+
+        @Test
+        void providerResolvesInCurrentScopeEachCall() {
+            Context session = root.subcontext(Scope.SESSION);
+            currentContext.set(session);
+            SessionWithProviderBean bean = session.get(SessionWithProviderBean.class);
+
+            Context request1 = session.subcontext(Scope.REQUEST);
+            currentContext.set(request1);
+            RequestInfo info1 = bean.requestInfoProvider.get();
+
+            Context request2 = session.subcontext(Scope.REQUEST);
+            currentContext.set(request2);
+            RequestInfo info2 = bean.requestInfoProvider.get();
+
+            assertNotSame(info1, info2);
+        }
+
+        @Test
+        void providerReturnsCachedBeanWithinSameRequest() {
+            Context session = root.subcontext(Scope.SESSION);
+            currentContext.set(session);
+            SessionWithProviderBean bean = session.get(SessionWithProviderBean.class);
+
+            Context request = session.subcontext(Scope.REQUEST);
+            currentContext.set(request);
+            RequestInfo first = bean.requestInfoProvider.get();
+            RequestInfo second = bean.requestInfoProvider.get();
+            assertSame(first, second);
+        }
+
+        @Test
+        void sessionBeanCanInjectInstanceOfRequestScoped() {
+            Context session = root.subcontext(Scope.SESSION);
+            currentContext.set(session);
+            SessionWithInstanceBean bean = session.get(SessionWithInstanceBean.class);
+            assertNotNull(bean.requestInfoInstance);
+
+            Context request = session.subcontext(Scope.REQUEST);
+            currentContext.set(request);
+            RequestInfo info = bean.requestInfoInstance.get();
+            assertNotNull(info);
+            assertNotNull(info.getRequestId());
+        }
+    }
+}

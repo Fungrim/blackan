@@ -1,0 +1,21 @@
+[versions]
+commons-math3 = "3.6.1"
+guava = "33.4.6-jre"
+junit-jupiter = "5.12.1"
+jandex = "3.3.1"
+jakarta-inject = "2.0.1"
+lombok = "1.18.38"
+cdi-spec = "4.1.0"
+validation-api = "3.1.1"
+mockito = "5.14.2"
+
+[libraries]
+commons-math3 = { module = "org.apache.commons:commons-math3", version.ref = "commons-math3" }
+guava = { module = "com.google.guava:guava", version.ref = "guava" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
+jandex = { module = "org.jboss:jandex", version.ref = "jandex" }
+jakarta-inject = { module = "jakarta.inject:jakarta.inject-api", version.ref = "jakarta-inject" }
+lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
+cdi-spec = { module = "jakarta.enterprise:jakarta.enterprise.cdi-api", version.ref = "cdi-spec" }
+validation-api = { module = "jakarta.validation:jakarta.validation-api", version.ref = "validation-api" }
+mockito = { module = "org.mockito:mockito-core", version.ref = "mockito" }
