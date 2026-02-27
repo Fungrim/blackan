@@ -6,7 +6,7 @@ import java.util.List;
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
 
-import io.github.fungrim.blackan.common.Arguments;
+import io.github.fungrim.blackan.common.util.Arguments;
 import jakarta.validation.constraints.NotNull;
 
 public record RecursionKey(

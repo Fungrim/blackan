@@ -1,7 +1,7 @@
 package io.github.fungrim.blackan.injector.lookup;
 
 import java.lang.annotation.Annotation;
-import java.util.Iterator;
+import java.util.List;
 
 import org.jboss.jandex.ClassInfo;
 
@@ -10,7 +10,8 @@ import jakarta.inject.Provider;
 
 public interface LimitedInstance {
 
-    public Iterator<ClassInfo> candidates();
+    // ordered list of candidates
+    public List<ClassInfo> candidates();
 
     public <T> T get(Class<T> type);
 

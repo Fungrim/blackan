@@ -7,16 +7,18 @@ repositories {
 }
 
 dependencies {
-    api(libs.jakarta.inject)
-    api(libs.cdi.spec)
+    implementation(project(":common"))
+    implementation(project(":injector"))
     // test classes
     testImplementation(libs.junit.jupiter)
+    testImplementation(libs.mockito)
+    testImplementation(libs.jandex)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     // lombok
-    compileOnly("org.projectlombok:lombok:1.18.38")
-    annotationProcessor("org.projectlombok:lombok:1.18.38")
-    testCompileOnly("org.projectlombok:lombok:1.18.38")
-    testAnnotationProcessor("org.projectlombok:lombok:1.18.38")
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)
+    testCompileOnly(libs.lombok)
+    testAnnotationProcessor(libs.lombok)
 }
 
 java {

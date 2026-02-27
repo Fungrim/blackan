@@ -9,7 +9,7 @@ import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.Index;
 
-import io.github.fungrim.blackan.common.Arguments;
+import io.github.fungrim.blackan.common.util.Arguments;
 import io.github.fungrim.blackan.injector.Context;
 import io.github.fungrim.blackan.injector.Scope;
 import io.github.fungrim.blackan.injector.creator.ConstructionException;

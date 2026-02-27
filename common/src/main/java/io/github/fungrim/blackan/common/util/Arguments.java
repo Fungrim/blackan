@@ -1,4 +1,4 @@
-package io.github.fungrim.blackan.common;
+package io.github.fungrim.blackan.common.util;
 
 import java.util.Objects;
 

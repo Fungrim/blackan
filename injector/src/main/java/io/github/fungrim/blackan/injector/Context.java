@@ -6,7 +6,9 @@ import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.Index;
 
-import io.github.fungrim.blackan.common.Arguments;
+import io.github.fungrim.blackan.common.util.Arguments;
+import io.github.fungrim.blackan.injector.context.ClassAccessImpl;
+import io.github.fungrim.blackan.injector.context.ClassInfoAccessImpl;
 import io.github.fungrim.blackan.injector.context.ContextImpl;
 import io.github.fungrim.blackan.injector.context.ProcessScopeProvider;
 import io.github.fungrim.blackan.injector.context.RootContext;
@@ -19,47 +21,11 @@ public interface Context {
     public static interface ClassAccess {
 
         public static ClassAccess of(final Class<?> cl) {
-            return new ClassAccess() {
-                
-                @Override
-                public Class<?> load(ClassLoader loader) {
-                    return cl;
-                }
-
-                @Override
-                public DotName name() {
-                    return DotName.createSimple(cl);
-                }
-
-                @Override
-                public boolean isInterface() {
-                    return cl.isInterface();
-                }
-            };
+            return new ClassAccessImpl(cl);
         }
 
         public static ClassAccess of(final ClassInfo info) {
-            return new ClassAccess() {
-
-                @Override
-                public Class<?> load(ClassLoader loader) {
-                    try {
-                        return loader.loadClass(info.name().toString());
-                    } catch (ClassNotFoundException e) {
-                        throw new ConstructionException("Failed to load class: " + info.name(), e);
-                    }
-                }
-
-                @Override
-                public DotName name() {
-                    return info.name();
-                }
-
-                @Override
-                public boolean isInterface() {
-                    return info.isInterface();
-                }
-            };
+            return new ClassInfoAccessImpl(info);
         }
 
         boolean isInterface();

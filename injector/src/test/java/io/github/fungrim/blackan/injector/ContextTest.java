@@ -32,11 +32,15 @@ import io.github.fungrim.blackan.injector.util.stubs.CircularProviderB;
 import io.github.fungrim.blackan.injector.util.stubs.EmailNotificationService;
 import io.github.fungrim.blackan.injector.util.stubs.GenericInjectionBean;
 import io.github.fungrim.blackan.injector.util.stubs.Greeting;
+import io.github.fungrim.blackan.injector.util.stubs.HighPriorityService;
 import io.github.fungrim.blackan.injector.util.stubs.IllegalAppBean;
 import io.github.fungrim.blackan.injector.util.stubs.ListProducer;
+import io.github.fungrim.blackan.injector.util.stubs.LowPriorityService;
+import io.github.fungrim.blackan.injector.util.stubs.NoPriorityService;
 import io.github.fungrim.blackan.injector.util.stubs.NonResolvableBean;
 import io.github.fungrim.blackan.injector.util.stubs.NonResolvableProviderBean;
 import io.github.fungrim.blackan.injector.util.stubs.NotificationService;
+import io.github.fungrim.blackan.injector.util.stubs.PriorityService;
 import io.github.fungrim.blackan.injector.util.stubs.RequestHandler;
 import io.github.fungrim.blackan.injector.util.stubs.RequestInfo;
 import io.github.fungrim.blackan.injector.util.stubs.RequestInfoImpl;
@@ -87,7 +91,11 @@ class ContextTest {
                         CircularConstructorA.class,
                         CircularConstructorB.class,
                         CircularProviderA.class,
-                        CircularProviderB.class))
+                        CircularProviderB.class,
+                        PriorityService.class,
+                        HighPriorityService.class,
+                        LowPriorityService.class,
+                        NoPriorityService.class))
                 .withScopeProvider(() -> currentContext.get())
                 .build();
         currentContext.set(root);
@@ -532,6 +540,20 @@ class ContextTest {
             assertNotNull(backToA);
             assertEquals("A", backToA.value());
             assertSame(a, backToA);
+        }
+    }
+
+    @Nested
+    class CandidatePriorityOrdering {
+
+        @Test
+        void candidatesAreOrderedByPriorityWithMissingPriorityLast() {
+            currentContext.set(root);
+            var candidates = root.getInstance(PriorityService.class).candidates();
+            assertEquals(3, candidates.size());
+            assertEquals(HighPriorityService.class.getName(), candidates.get(0).name().toString());
+            assertEquals(LowPriorityService.class.getName(), candidates.get(1).name().toString());
+            assertEquals(NoPriorityService.class.getName(), candidates.get(2).name().toString());
         }
     }
 }

@@ -3,4 +3,4 @@ plugins {
 }
 
 rootProject.name = "blackan"
-include("common", "injector")
+include("common", "injector", "core")

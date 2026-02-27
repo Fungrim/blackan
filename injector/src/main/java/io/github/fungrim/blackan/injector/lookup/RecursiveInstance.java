@@ -8,8 +8,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Spliterator;
-import java.util.Spliterators;
 import java.util.stream.StreamSupport;
 
 import org.jboss.jandex.AnnotationInstance;
@@ -97,8 +95,15 @@ public class RecursiveInstance implements LimitedInstance {
     }
 
     @Override
-    public Iterator<ClassInfo> candidates() {
-        return candidates.stream().toList().iterator();
+    public List<ClassInfo> candidates() {
+        return candidates.stream()
+                .sorted((a, b) -> Integer.compare(priorityOf(a), priorityOf(b)))
+                .toList();
+    }
+
+    private static int priorityOf(ClassInfo info) {
+        AnnotationInstance ann = info.annotation(PRIORITY);
+        return ann != null ? ann.value().asInt() : Integer.MAX_VALUE;
     }
 
     @Override
@@ -140,7 +145,7 @@ public class RecursiveInstance implements LimitedInstance {
             @Override
             public Iterator<T> iterator() {
                 return StreamSupport.stream(
-                        Spliterators.spliteratorUnknownSize(candidates(), Spliterator.ORDERED),
+                        candidates().spliterator(),
                         false).map(c -> providerFactory.create(c, type).get()).iterator();
             }
 

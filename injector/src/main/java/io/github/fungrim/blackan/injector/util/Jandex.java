@@ -9,7 +9,7 @@ import org.jboss.jandex.FieldInfo;
 import org.jboss.jandex.MethodInfo;
 import org.jboss.jandex.Type;
 
-import io.github.fungrim.blackan.common.Arguments;
+import io.github.fungrim.blackan.common.util.Arguments;
 import io.github.fungrim.blackan.injector.creator.ConstructionException;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
