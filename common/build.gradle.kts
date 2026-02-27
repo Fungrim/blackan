@@ -1,5 +1,7 @@
 plugins {
     `java-library`
+    `maven-publish`
+    id("org.kordamp.gradle.jandex") version "2.3.0"
 }
 
 repositories {
@@ -27,4 +29,18 @@ java {
 
 tasks.named<Test>("test") {
     useJUnitPlatform()
+}
+
+version = (rootProject.extensions.findByName("semver") as net.thauvin.erik.gradle.semver.SemverConfig).version
+group = "io.github.fungrim.blackan"
+
+publishing {
+    publications {
+        create<MavenPublication>("common") {
+            from(components["java"])       
+        }
+    }
+    repositories {
+        mavenLocal()
+    }
 }

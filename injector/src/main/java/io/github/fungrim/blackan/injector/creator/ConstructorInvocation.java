@@ -2,9 +2,13 @@ package io.github.fungrim.blackan.injector.creator;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
+import java.util.Arrays;
 import java.util.Optional;
 
+import io.github.fungrim.blackan.common.cdi.InjectionTarget;
+import io.github.fungrim.blackan.common.cdi.TargetType;
 import io.github.fungrim.blackan.injector.Context;
 import io.github.fungrim.blackan.injector.lookup.RecursionKey;
 import jakarta.inject.Inject;
@@ -61,11 +65,26 @@ public class ConstructorInvocation<T> {
     public T create() {
         try {
             constructor.setAccessible(true);
-            T instance = (T) constructor.newInstance(InvocationUtil.resolveParameters(context, parameters, genericTypes));
+            InjectionTarget[] targets = buildTargets(constructor);
+            T instance = (T) constructor.newInstance(InvocationUtil.resolveParameters(context, parameters, genericTypes, targets));
             constructor.setAccessible(false);
             return instance;
         } catch (Exception e) {
             throw new ConstructionException("Failed to create instance of " + constructor.getDeclaringClass().getName(), e);
         }
+    }
+
+    private static InjectionTarget[] buildTargets(Constructor<?> ctor) {
+        Parameter[] params = ctor.getParameters();
+        InjectionTarget[] targets = new InjectionTarget[params.length];
+        for (int i = 0; i < params.length; i++) {
+            targets[i] = new InjectionTarget(
+                    ctor.getDeclaringClass(),
+                    TargetType.CONSTRUCTOR,
+                    params[i].getName(),
+                    Arrays.stream(params[i].getAnnotations()).toList()
+            );
+        }
+        return targets;
     }
 }

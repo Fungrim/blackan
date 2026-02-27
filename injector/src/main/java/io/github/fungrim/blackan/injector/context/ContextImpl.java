@@ -7,7 +7,7 @@ import java.util.Optional;
 
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
-import org.jboss.jandex.Index;
+import org.jboss.jandex.IndexView;
 
 import io.github.fungrim.blackan.common.util.Arguments;
 import io.github.fungrim.blackan.injector.Context;
@@ -23,7 +23,7 @@ import io.github.fungrim.blackan.injector.producer.ProducerRegistry;
 
 public class ContextImpl implements Context {
 
-    protected final Index index;
+    protected final IndexView index;
     protected final Context parent;
     protected final ProviderFactory creatorFactory;
     protected final InstanceFactory instanceFactory;
@@ -32,11 +32,11 @@ public class ContextImpl implements Context {
     protected final ProcessScopeProvider scopeProvider;
     protected final ProducerRegistry producerRegistry;
 
-    public ContextImpl(Index index, Context parent, Scope scope, ClassLoader classLoader, ProcessScopeProvider scopeProvider) {
+    public ContextImpl(IndexView index, Context parent, Scope scope, ClassLoader classLoader, ProcessScopeProvider scopeProvider) {
         this(index, parent, scope, classLoader, scopeProvider, parent != null ? parent.producerRegistry() : new ProducerRegistry());
     }
 
-    public ContextImpl(Index index, Context parent, Scope scope, ClassLoader classLoader, ProcessScopeProvider scopeProvider, ProducerRegistry producerRegistry) {
+    public ContextImpl(IndexView index, Context parent, Scope scope, ClassLoader classLoader, ProcessScopeProvider scopeProvider, ProducerRegistry producerRegistry) {
         this.index = index;
         this.parent = parent;
         this.scope = scope;
@@ -52,7 +52,7 @@ public class ContextImpl implements Context {
     }
     
     @Override
-    public Index index() {
+    public IndexView index() {
         return index;
     }
 

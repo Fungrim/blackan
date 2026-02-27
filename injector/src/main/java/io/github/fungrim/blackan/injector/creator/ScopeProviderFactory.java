@@ -44,7 +44,7 @@ public class ScopeProviderFactory implements ProviderFactory {
                 }
                 // create provider using the concrete class from the ClassInfo
                 Class<T> concreteClass = (Class<T>) context.loadClass(type.name());
-                DependentProvider<T> provider = new DependentProvider<>(context, concreteClass);
+                DependentProvider<T> provider = new DependentProvider<>(context, type, concreteClass);
                 if(scope == Scope.DEPENDENT) {
                     return (Provider<T>) cache.computeIfAbsent(type, t -> provider);
                 } else {

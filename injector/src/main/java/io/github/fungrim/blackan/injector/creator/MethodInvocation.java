@@ -2,10 +2,14 @@ package io.github.fungrim.blackan.injector.creator;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
+import io.github.fungrim.blackan.common.cdi.InjectionTarget;
+import io.github.fungrim.blackan.common.cdi.TargetType;
 import io.github.fungrim.blackan.injector.Context;
 import io.github.fungrim.blackan.injector.lookup.RecursionKey;
 import jakarta.inject.Inject;
@@ -48,10 +52,25 @@ public class MethodInvocation {
     public void invoke() {
         try {
             method.setAccessible(true);
-            method.invoke(object, InvocationUtil.resolveParameters(context, parameters, genericTypes));
+            InjectionTarget[] targets = buildTargets(method);
+            method.invoke(object, InvocationUtil.resolveParameters(context, parameters, genericTypes, targets));
             method.setAccessible(false);
         } catch (Exception e) {
             throw new ConstructionException("Failed to invoke method " + method.getName(), e);
         }
+    }
+
+    private static InjectionTarget[] buildTargets(Method m) {
+        Parameter[] params = m.getParameters();
+        InjectionTarget[] targets = new InjectionTarget[params.length];
+        for (int i = 0; i < params.length; i++) {
+            targets[i] = new InjectionTarget(
+                    m.getDeclaringClass(),
+                    TargetType.METHOD,
+                    params[i].getName(),
+                    Arrays.stream(params[i].getAnnotations()).toList()
+            );
+        }
+        return targets;
     }
 }

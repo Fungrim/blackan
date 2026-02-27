@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -42,7 +43,7 @@ class DependentProviderTest {
         @Test
         void createsSimpleBean() {
             Context context = mock(Context.class);
-            var creator = new DependentProvider<>(context, NoArgBean.class);
+            var creator = new DependentProvider<>(context, mock(ClassInfo.class), NoArgBean.class);
             var result = creator.get();
             assertInstanceOf(NoArgBean.class, result);
         }
@@ -54,7 +55,7 @@ class DependentProviderTest {
         @Test
         void injectsField() {
             Context context = mockContextForAny("injected");
-            var creator = new DependentProvider<>(context, FieldInjectedBean.class);
+            var creator = new DependentProvider<>(context, mock(ClassInfo.class), FieldInjectedBean.class);
             FieldInjectedBean result = creator.get();
             assertEquals("injected", result.value);
         }
@@ -66,7 +67,7 @@ class DependentProviderTest {
         @Test
         void injectsViaMethod() {
             Context context = mockContextForAny("fromMethod");
-            var creator = new DependentProvider<>(context, MethodInjectedBean.class);
+            var creator = new DependentProvider<>(context, mock(ClassInfo.class), MethodInjectedBean.class);
             MethodInjectedBean result = creator.get();
             assertEquals("fromMethod", result.value);
         }
@@ -78,7 +79,7 @@ class DependentProviderTest {
         @Test
         void injectsConstructorFieldAndMethod() {
             Context context = mockContextForAny("hello", 42, 99L);
-            var creator = new DependentProvider<>(context, FullInjectedBean.class);
+            var creator = new DependentProvider<>(context, mock(ClassInfo.class), FullInjectedBean.class);
             FullInjectedBean result = creator.get();
             assertNotNull(result);
             assertEquals("hello", result.name);

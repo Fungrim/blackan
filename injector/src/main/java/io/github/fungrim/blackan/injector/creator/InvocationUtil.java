@@ -7,9 +7,12 @@ import java.util.Optional;
 
 import org.jboss.jandex.DotName;
 
+import io.github.fungrim.blackan.common.cdi.InjectionTarget;
+import io.github.fungrim.blackan.common.cdi.TargetAwareProvider;
 import io.github.fungrim.blackan.injector.Context;
 import io.github.fungrim.blackan.injector.lookup.RecursionKey;
 import io.github.fungrim.blackan.injector.producer.ProducerKey;
+import io.github.fungrim.blackan.injector.producer.ProducerRegistry;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Provider;
 import lombok.AccessLevel;
@@ -19,15 +22,24 @@ import lombok.NoArgsConstructor;
 public class InvocationUtil {
 
     public static Object[] resolveParameters(Context context, RecursionKey[] parameters, Type[] genericTypes) {
+        return resolveParameters(context, parameters, genericTypes, null);
+    }
+
+    public static Object[] resolveParameters(Context context, RecursionKey[] parameters, Type[] genericTypes, InjectionTarget[] targets) {
         Object[] args = new Object[parameters.length];
         for (int i = 0; i < parameters.length; i++) {
-            args[i] = resolveInjectionPoint(context, parameters[i], genericTypes[i]);
+            InjectionTarget target = targets != null ? targets[i] : null;
+            args[i] = resolveInjectionPoint(context, parameters[i], genericTypes[i], target);
         }
         return args;
     }
 
-    @SuppressWarnings("unchecked")
     public static Object resolveInjectionPoint(Context context, RecursionKey key, Type genericType) {
+        return resolveInjectionPoint(context, key, genericType, null);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static Object resolveInjectionPoint(Context context, RecursionKey key, Type genericType, InjectionTarget target) {
         Class<?> rawType = rawClass(genericType);
         if (Instance.class.isAssignableFrom(rawType)) {
             Class<Object> typeArg = (Class<Object>) extractTypeArgument(genericType);
@@ -39,15 +51,26 @@ public class InvocationUtil {
             DotName typeName = DotName.createSimple(typeArg);
             return new SubScopeProvider<>(context.processScopeProvider(), typeName, typeArg);
         }
-        if (genericType instanceof ParameterizedType) {
-            Annotation[] qualifiers = key.qualifiers().toArray(new Annotation[0]);
-            ProducerKey producerKey = ProducerKey.of(genericType, qualifiers);
-            Optional<Provider<Object>> producer = context.producerRegistry().find(producerKey);
-            if (producer.isPresent()) {
-                return producer.get().get();
+        if (Context.class.isAssignableFrom(rawType)) {
+            if(DependentProviderStack.isInExtension()) {
+                return context;
+            } else {
+                throw new ConstructionException("Injection of Context is disallowed outside of extensions");
             }
         }
-        return context.getInstance(key.type()).get(context.loadClass(key.type()));
+        Annotation[] qualifiers = key.qualifiers().toArray(new Annotation[0]);
+        ProducerKey producerKey = ProducerKey.of(genericType, qualifiers);
+        ProducerRegistry registry = context.producerRegistry();
+        if (registry != null) {
+            Optional<Provider<Object>> producer = registry.find(producerKey);
+            if (producer.isPresent()) {
+                return unwrapIfTargetAware(producer.get().get(), target);
+            }
+        }
+        return unwrapIfTargetAware(
+                context.getInstance(key.type()).get(context.loadClass(key.type())),
+                target
+        );
     }
 
     private static Class<?> rawClass(Type type) {
@@ -58,6 +81,13 @@ public class InvocationUtil {
             return (Class<?>) pt.getRawType();
         }
         return Object.class;
+    }
+
+    private static Object unwrapIfTargetAware(Object value, InjectionTarget target) {
+        if (value instanceof TargetAwareProvider<?> tap && target != null) {
+            return tap.get(target);
+        }
+        return value;
     }
 
     private static Class<?> extractTypeArgument(Type type) {

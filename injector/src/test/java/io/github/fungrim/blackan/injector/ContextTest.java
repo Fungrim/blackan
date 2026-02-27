@@ -30,6 +30,8 @@ import io.github.fungrim.blackan.injector.util.stubs.CircularFieldB;
 import io.github.fungrim.blackan.injector.util.stubs.CircularProviderA;
 import io.github.fungrim.blackan.injector.util.stubs.CircularProviderB;
 import io.github.fungrim.blackan.injector.util.stubs.EmailNotificationService;
+import io.github.fungrim.blackan.injector.util.stubs.ExtensionWithContextBean;
+import io.github.fungrim.blackan.injector.util.stubs.ExtensionWithTargetAwareBean;
 import io.github.fungrim.blackan.injector.util.stubs.GenericInjectionBean;
 import io.github.fungrim.blackan.injector.util.stubs.Greeting;
 import io.github.fungrim.blackan.injector.util.stubs.HighPriorityService;
@@ -37,6 +39,7 @@ import io.github.fungrim.blackan.injector.util.stubs.IllegalAppBean;
 import io.github.fungrim.blackan.injector.util.stubs.ListProducer;
 import io.github.fungrim.blackan.injector.util.stubs.LowPriorityService;
 import io.github.fungrim.blackan.injector.util.stubs.NoPriorityService;
+import io.github.fungrim.blackan.injector.util.stubs.NonExtensionWithContextBean;
 import io.github.fungrim.blackan.injector.util.stubs.NonResolvableBean;
 import io.github.fungrim.blackan.injector.util.stubs.NonResolvableProviderBean;
 import io.github.fungrim.blackan.injector.util.stubs.NotificationService;
@@ -50,6 +53,7 @@ import io.github.fungrim.blackan.injector.util.stubs.SessionService;
 import io.github.fungrim.blackan.injector.util.stubs.SessionWithInstanceBean;
 import io.github.fungrim.blackan.injector.util.stubs.SessionWithProviderBean;
 import io.github.fungrim.blackan.injector.util.stubs.SmsNotificationService;
+import io.github.fungrim.blackan.injector.util.stubs.TargetAwareProducer;
 import io.github.fungrim.blackan.injector.util.stubs.UnsatisfiedInstanceBean;
 
 class ContextTest {
@@ -92,6 +96,10 @@ class ContextTest {
                         CircularConstructorB.class,
                         CircularProviderA.class,
                         CircularProviderB.class,
+                        ExtensionWithContextBean.class,
+                        NonExtensionWithContextBean.class,
+                        TargetAwareProducer.class,
+                        ExtensionWithTargetAwareBean.class,
                         PriorityService.class,
                         HighPriorityService.class,
                         LowPriorityService.class,
@@ -540,6 +548,37 @@ class ContextTest {
             assertNotNull(backToA);
             assertEquals("A", backToA.value());
             assertSame(a, backToA);
+        }
+    }
+
+    @Nested
+    class ExtensionContextInjection {
+
+        @Test
+        void extensionBeanCanInjectContext() {
+            currentContext.set(root);
+            ExtensionWithContextBean bean = root.get(ExtensionWithContextBean.class);
+            assertNotNull(bean.context);
+            assertSame(root, bean.context);
+        }
+
+        @Test
+        void nonExtensionBeanCannotInjectContext() {
+            currentContext.set(root);
+            assertThrows(ConstructionException.class,
+                    () -> root.get(NonExtensionWithContextBean.class));
+        }
+    }
+
+    @Nested
+    class TargetAwareProviderInjection {
+
+        @Test
+        void extensionBeanGetsTargetAwareValueResolved() {
+            currentContext.set(root);
+            ExtensionWithTargetAwareBean bean = root.get(ExtensionWithTargetAwareBean.class);
+            assertNotNull(bean.greeting);
+            assertEquals("hello from ExtensionWithTargetAwareBean.greeting", bean.greeting);
         }
     }
 

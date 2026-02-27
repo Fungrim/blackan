@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.Index;
+import org.jboss.jandex.IndexView;
 import org.jboss.jandex.Indexer;
 
 import io.github.fungrim.blackan.common.util.Arguments;
@@ -13,7 +14,7 @@ import io.github.fungrim.blackan.injector.Scope;
 
 public class RootContext extends ContextImpl {
 
-    private RootContext(Index index, Scope scope, ClassLoader classLoader, ProcessScopeProvider scopeProvider) {
+    private RootContext(IndexView index, Scope scope, ClassLoader classLoader, ProcessScopeProvider scopeProvider) {
         super(index, null, scope, classLoader, scopeProvider);
         scanProducers();
     }
@@ -31,7 +32,7 @@ public class RootContext extends ContextImpl {
 
     public static class Builder {
 
-        private Index index;
+        private IndexView index;
         private List<Class<?>> classes;
         private ClassLoader classLoader;
         private ProcessScopeProvider scopeProvider;
@@ -51,7 +52,7 @@ public class RootContext extends ContextImpl {
             return this;
         }
 
-        public Builder withIndex(Index index) {
+        public Builder withIndex(IndexView index) {
             this.index = index;
             return this;
         }

@@ -5,6 +5,7 @@ import java.util.Optional;
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.Index;
+import org.jboss.jandex.IndexView;
 
 import io.github.fungrim.blackan.common.util.Arguments;
 import io.github.fungrim.blackan.injector.context.ClassAccessImpl;
@@ -36,7 +37,7 @@ public interface Context {
 
     }
 
-    Index index();
+    IndexView index();
 
     Optional<Context> parent();
 
