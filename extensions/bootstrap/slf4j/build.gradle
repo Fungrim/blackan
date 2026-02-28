@@ -1,0 +1,49 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'org.kordamp.gradle.jandex' version '2.3.0'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation project(':common')
+    implementation libs.slf4j.api
+    implementation libs.slf4j.jboss
+    implementation libs.jboss.logmanager
+    // test classes
+    testImplementation libs.junit.jupiter
+    testImplementation libs.mockito
+    testImplementation libs.jandex
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    // lombok
+    compileOnly libs.lombok
+    annotationProcessor libs.lombok
+    testCompileOnly libs.lombok
+    testAnnotationProcessor libs.lombok
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
+}
+
+publishing {
+    publications {
+        slf4j(MavenPublication) {
+            from components.java
+            groupId = 'io.github.fungrim.blackan.extension'
+            version = "${semver.semver}"
+        }
+    }
+    repositories {
+        mavenLocal()
+    }
+}

@@ -1,0 +1,96 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+}
+
+repositories {
+    mavenCentral()
+}
+
+configurations {
+    boot {
+        transitive = true
+    }
+    runtime {
+        transitive = true
+    }
+}
+
+dependencies {
+    boot project(':isolates:bootstrap')
+    runtime project(':isolates:runtime')
+    runtime project(':isolates:testservice')
+    runtime project(':extensions:bootstrap:slf4j')
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
+}
+
+version = rootProject.extensions.findByName('semver').version
+group = 'io.github.fungrim.blackan.isolates'
+
+def appDir = layout.buildDirectory.dir('blackan-app')
+def bootDir = appDir.map { it.dir('boot') }
+def runtimeDir = appDir.map { it.dir('runtime') }
+
+tasks.register('copyBoot', Copy) {
+    from configurations.boot
+    into bootDir
+    outputs.upToDateWhen { false }
+}
+
+tasks.register('copyRuntime', Copy) {
+    from configurations.runtime.minus(configurations.boot)
+    into runtimeDir
+    outputs.upToDateWhen { false }
+}
+
+tasks.register('createRunJar', Jar) {
+    dependsOn copyBoot
+    archiveFileName.set('blackan-run.jar')
+    destinationDirectory.set(appDir)
+    outputs.upToDateWhen { false }
+    manifest {
+        attributes(
+            'Manifest-Version': '1.0',
+            'Main-Class': 'io.github.fungrim.blackan.bootstrap.BlackanBootstrap',
+            'Class-Path': configurations.boot.collect { "boot/${it.name}" }.join(' '),
+            'Add-Opens': 'java.base/java.lang'
+        )
+    }
+}
+
+tasks.register('assembleApp', Zip) {
+    dependsOn copyBoot, copyRuntime, createRunJar
+    from appDir
+    archiveFileName.set('blackan-app.jar')
+    destinationDirectory.set(layout.buildDirectory.dir('libs'))
+    outputs.upToDateWhen { false }
+}
+
+tasks.named('assemble') {
+    dependsOn assembleApp
+}
+
+publishing {
+    publications {
+        testjar(MavenPublication) {
+            groupId = project.group.toString()
+            artifactId = project.name
+            version = project.version.toString()
+            artifact(assembleApp) {
+                extension = 'jar'
+            }
+        }
+    }
+    repositories {
+        mavenLocal()
+    }
+}

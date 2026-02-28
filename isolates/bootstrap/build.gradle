@@ -1,0 +1,44 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    api libs.classgraph
+    // test classes
+    testImplementation libs.junit.jupiter
+    testImplementation libs.mockito
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    // lombok
+    compileOnly libs.lombok
+    annotationProcessor libs.lombok
+    testCompileOnly libs.lombok
+    testAnnotationProcessor libs.lombok
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
+}
+
+publishing {
+    publications {
+        bootstrap(MavenPublication) {
+            from components.java
+            groupId = 'io.github.fungrim.blackan.isolates'
+            version = "${semver.semver}"
+        }
+    }
+    repositories {
+        mavenLocal()
+    }
+}
