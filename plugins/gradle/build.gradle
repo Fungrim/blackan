@@ -7,18 +7,28 @@ repositories {
     mavenCentral()
 }
 
+configurations {
+    boot {
+        transitive = true
+        canBeResolved = true
+        canBeConsumed = false
+    }
+    blackanRuntime {
+        transitive = true
+        canBeResolved = true
+        canBeConsumed = false
+    }
+}
+
 dependencies {
-    implementation project(':common')
+    boot project(':isolates:bootstrap')
+    blackanRuntime project(':isolates:runtime')
+    blackanRuntime project(':extensions:bootstrap:slf4j')
     implementation libs.jandex
     // test classes
     testImplementation libs.junit.jupiter
     testImplementation libs.mockito
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-    // lombok
-    compileOnly libs.lombok
-    annotationProcessor libs.lombok
-    testCompileOnly libs.lombok
-    testAnnotationProcessor libs.lombok
 }
 
 java {
@@ -26,6 +36,57 @@ java {
         languageVersion = JavaLanguageVersion.of(21)
     }
 }
+
+def generatedResourcesDir = layout.buildDirectory.dir('generated/resources/app-libs')
+
+def collectGavs = { config ->
+    def gavs = []
+    config.dependencies.each { dep ->
+        if (dep instanceof org.gradle.api.artifacts.ProjectDependency) {
+            def p = project.project(dep.path)
+            def pub = p.extensions.findByType(org.gradle.api.publish.PublishingExtension)?.publications
+                    ?.withType(org.gradle.api.publish.maven.MavenPublication)
+                    ?.find { true }
+            if (pub != null) {
+                gavs.add("${pub.groupId}:${pub.artifactId}:${version}")
+            } else {
+                gavs.add("${p.group}:${p.name}:${version}")
+            }
+        } else {
+            gavs.add("${dep.group}:${dep.name}:${dep.version}")
+        }
+    }
+    return gavs
+}
+
+tasks.register('generateAppLibsToml') {
+    def outDir = generatedResourcesDir
+    def bootList = provider { collectGavs(configurations.boot) }
+    def runtimeList = provider { collectGavs(configurations.blackanRuntime) }
+    inputs.property('bootGavs', bootList)
+    inputs.property('runtimeGavs', runtimeList)
+    outputs.dir(outDir)
+    outputs.upToDateWhen { false }
+    doLast {
+        def toml = new StringBuilder()
+        toml.append('[boot]\n')
+        bootList.get().each { gav ->
+            def name = gav.split(':')[1]
+            toml.append("${name} = \"${gav}\"\n")
+        }
+        toml.append('\n[runtime]\n')
+        runtimeList.get().each { gav ->
+            def name = gav.split(':')[1]
+            toml.append("${name} = \"${gav}\"\n")
+        }
+        def dir = outDir.get().asFile
+        dir.mkdirs()
+        new File(dir, 'app-libs.toml').text = toml.toString()
+    }
+}
+
+sourceSets.main.resources.srcDir(generatedResourcesDir)
+tasks.named('processResources') { dependsOn generateAppLibsToml }
 
 tasks.named('test', Test) {
     useJUnitPlatform()

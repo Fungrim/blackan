@@ -7,9 +7,7 @@ cdi-spec = "4.1.0"
 validation-api = "3.1.1"
 mockito = "5.14.2"
 slf4j-api = "2.0.17"
-classgraph = "4.8.184"
-slf4j-jboss = "2.1.0.Final"
-jboss-logmanager = "3.2.0.Final"
+common = "0.0.1-SNAPSHOT"
 
 [libraries]
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
@@ -20,6 +18,4 @@ cdi-spec = { module = "jakarta.enterprise:jakarta.enterprise.cdi-api", version.r
 validation-api = { module = "jakarta.validation:jakarta.validation-api", version.ref = "validation-api" }
 mockito = { module = "org.mockito:mockito-core", version.ref = "mockito" }
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j-api" }
-classgraph = { module = "io.github.classgraph:classgraph", version.ref = "classgraph" }
-slf4j-jboss = { module = "org.jboss.slf4j:slf4j-jboss-logmanager", version.ref = "slf4j-jboss" }
-jboss-logmanager = { module = "org.jboss.logmanager:jboss-logmanager", version.ref = "jboss-logmanager" }
+common = { module = "io.github.fungrim.blackan:common", version.ref = "common" }

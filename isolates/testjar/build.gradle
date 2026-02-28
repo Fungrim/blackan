@@ -19,7 +19,7 @@ configurations {
 dependencies {
     boot project(':isolates:bootstrap')
     runtime project(':isolates:runtime')
-    runtime project(':isolates:testservice')
+    // runtime project(':isolates:testservice')
     runtime project(':extensions:bootstrap:slf4j')
 }
 

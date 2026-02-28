@@ -1,15 +1,15 @@
 plugins {
     id 'java-library'
-    id 'maven-publish'
-    id 'org.kordamp.gradle.jandex' version '2.3.0'
+    id 'io.fungrim.github.blackan.gradle' version '0.0.1-SNAPSHOT'
 }
 
 repositories {
     mavenCentral()
+    mavenLocal()
 }
 
 dependencies {
-    implementation project(':common')
+    implementation libs.common
     implementation libs.slf4j.api
     // test classes
     testImplementation libs.junit.jupiter
@@ -30,17 +30,4 @@ java {
 
 tasks.named('test', Test) {
     useJUnitPlatform()
-}
-
-publishing {
-    publications {
-        testservice(MavenPublication) {
-            from components.java
-            groupId = 'io.github.fungrim.blackan.test'
-            version = "${semver.semver}"
-        }
-    }
-    repositories {
-        mavenLocal()
-    }
 }
