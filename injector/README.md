@@ -4,16 +4,16 @@ A lightweight CDI-inspired dependency injection container for Java. It uses [Jan
 
 ## Creating a Context
 
-Use `RootContext.builder()` to create an application-scoped root context. Provide either a list of classes or a pre-built Jandex index.
+Use `Context.builder()` to create an application-scoped root context. Provide either a list of classes or a pre-built Jandex index.
 
 ```java
 // From a list of classes
-Context context = RootContext.builder()
+Context context = Context.builder()
         .withClasses(List.of(MyService.class, MyRepository.class))
         .build();
 
 // From a Jandex index
-Context context = RootContext.builder()
+Context context = Context.builder()
         .withIndex(index)
         .build();
 
@@ -34,12 +34,21 @@ Context request = session.subcontext(Scope.REQUEST);
 session.close();
 ```
 
-The container does not automatically associate subcontexts with threads or requests. The caller is responsible for tracking the active context (e.g. in a `ThreadLocal` or request attribute) and making it available through a `ProcessScopeProvider`. This provider is consulted whenever the container needs to resolve which context is current for the running thread.
+A context can be entered, in which case it is associated with an internal thread local what
+is used for nested context access: 
+
+```java
+context.enterScope(() -> {
+    // Code here runs with this context as the current context
+});
+```
+
+If the scope is not entered, container does not automatically associate subcontexts with threads or requests. In such a case, the caller is responsible for tracking the active context (e.g. in a `ThreadLocal` or request attribute) and making it available through a `ProcessScopeProvider`. This provider is consulted whenever the container needs to resolve which context is current for the running thread.
 
 ```java
 AtomicReference<Context> current = new AtomicReference<>();
 
-Context root = RootContext.builder()
+Context root = Context.builder()
         .withClasses(List.of(MyService.class))
         .withScopeProvider(() -> current.get())
         .build();
@@ -99,9 +108,31 @@ public class StartupListener {
 }
 ```
 
+## No Client Proxies
+
+Unlike a full CDI container, Blackan does **not** generate client proxies for normal-scoped beans. Beans are created eagerly when first looked up and injected as direct references. This means you cannot directly inject a shorter-lived bean into a longer-lived one — the reference would be captured at injection time and never refreshed.
+
+Instead you should inject a `Provider<T>` that would resolve the correct instance on every call. For example, injecting a `@RequestScoped` bean into a `@SessionScoped` bean via a plain field would pin the first request's instance for the lifetime of the session. Instead, inject a `Provider<T>` so the container resolves the current instance on every call:
+
+```java
+@SessionScoped
+public class SessionService {
+
+    @Inject
+    Provider<RequestInfo> requestInfoProvider;
+
+    public void handleRequest() {
+        // Resolved against the current request context each time
+        RequestInfo info = requestInfoProvider.get();
+    }
+}
+```
+
+The same pattern applies whenever a wider scope needs access to a narrower scope — `@ApplicationScoped` to `@SessionScoped`, `@SessionScoped` to `@RequestScoped`, etc. `jakarta.enterprise.inject.Instance<T>` works the same way and additionally supports ambiguous/unsatisfied resolution checks.
+
 ## CDI Compatibility
 
-Blackan Injector implements a practical subset of the CDI specification. The most significant difference is the **absence of client proxies** — normal-scoped beans are not proxied, so lazy initialization and scope-crossing behavior differs from a full CDI container. Beans are created eagerly when first looked up and injected directly.
+Blackan Injector implements a practical subset of the CDI specification. Because there are no client proxies, lazy initialization and scope-crossing behavior differs from a full CDI container (see above).
 
 Unsupported features include:
 

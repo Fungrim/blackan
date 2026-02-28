@@ -17,7 +17,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import io.github.fungrim.blackan.injector.context.RootContext;
 import io.github.fungrim.blackan.injector.util.stubs.AppGreeting;
 import io.github.fungrim.blackan.injector.util.stubs.Greeting;
 import io.github.fungrim.blackan.injector.util.stubs.LifecycleBean;
@@ -47,7 +46,7 @@ class LifecycleEventTest {
 
         @Test
         void initializedIsFiredOnContextCreation() throws IOException {
-            RootContext root = RootContext.builder()
+            Context root = Context.builder()
                     .withClasses(List.of(LifecycleBean.class))
                     .withScopeProvider(() -> currentContext.get())
                     .build();
@@ -59,7 +58,7 @@ class LifecycleEventTest {
 
         @Test
         void beforeDestroyedAndDestroyedAreFiredOnClose() throws IOException {
-            RootContext root = RootContext.builder()
+            Context root = Context.builder()
                     .withClasses(List.of(LifecycleBean.class))
                     .withScopeProvider(() -> currentContext.get())
                     .build();
@@ -74,7 +73,7 @@ class LifecycleEventTest {
 
         @Test
         void allLifecycleEventsFireInCorrectOrder() throws IOException {
-            RootContext root = RootContext.builder()
+            Context root = Context.builder()
                     .withClasses(List.of(LifecycleBean.class))
                     .withScopeProvider(() -> currentContext.get())
                     .build();
@@ -105,7 +104,7 @@ class LifecycleEventTest {
         void initializedEventsRespectEventOrdering() throws IOException {
             Comparator<ClassInfo> ordering = Comparator.comparingInt(LifecycleEventTest::priorityOf);
 
-            RootContext root = RootContext.builder()
+            Context root = Context.builder()
                     .withClasses(List.of(LifecycleBean.class, SecondLifecycleBean.class))
                     .withEventOrdering(ordering)
                     .withScopeProvider(() -> currentContext.get())
@@ -132,7 +131,7 @@ class LifecycleEventTest {
 
         @Test
         void requestScopedEventDoesNotFireInApplicationContext() throws IOException {
-            RootContext root = RootContext.builder()
+            Context root = Context.builder()
                     .withClasses(List.of(RequestScopedLifecycleBean.class))
                     .withScopeProvider(() -> currentContext.get())
                     .build();
@@ -144,7 +143,7 @@ class LifecycleEventTest {
 
         @Test
         void requestScopedEventFiresInRequestContext() throws IOException {
-            RootContext root = RootContext.builder()
+            Context root = Context.builder()
                     .withClasses(List.of(RequestScopedLifecycleBean.class))
                     .withScopeProvider(() -> currentContext.get())
                     .build();
@@ -160,7 +159,7 @@ class LifecycleEventTest {
 
         @Test
         void applicationScopedEventDoesNotFireInRequestContext() throws IOException {
-            RootContext root = RootContext.builder()
+            Context root = Context.builder()
                     .withClasses(List.of(LifecycleBean.class))
                     .withScopeProvider(() -> currentContext.get())
                     .build();
@@ -181,7 +180,7 @@ class LifecycleEventTest {
 
         @Test
         void lifecycleEventMethodCanHaveInjectedParameters() throws IOException {
-            RootContext root = RootContext.builder()
+            Context root = Context.builder()
                     .withClasses(List.of(
                             Greeting.class, AppGreeting.class,
                             LifecycleBeanWithInjection.class))

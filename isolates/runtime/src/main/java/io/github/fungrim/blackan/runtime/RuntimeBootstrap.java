@@ -6,7 +6,6 @@ import org.jboss.jandex.IndexView;
 
 import io.github.fungrim.blackan.bootstrap.classloader.RuntimeClassLoader;
 import io.github.fungrim.blackan.injector.Context;
-import io.github.fungrim.blackan.injector.context.RootContext;
 import io.github.fungrim.blackan.runtime.jandex.CompositeIndexViewFactory;
 
 public class RuntimeBootstrap {
@@ -18,7 +17,7 @@ public class RuntimeBootstrap {
             IndexView indexView = new CompositeIndexViewFactory(loader.getApplicationJars()).create();
             System.out.println("RuntimeBootstrap.index.classes: ");
             indexView.getKnownClasses().forEach(c -> System.out.println(" - " + c.name().toString()));
-            Context context = RootContext.builder()
+            Context context = Context.builder()
                 .withIndex(indexView)
                 .build();
             new RuntimeController(context).run();

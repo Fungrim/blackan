@@ -44,12 +44,12 @@ public class InvocationUtil {
         if (Instance.class.isAssignableFrom(rawType)) {
             Class<Object> typeArg = (Class<Object>) extractTypeArgument(genericType);
             DotName typeName = DotName.createSimple(typeArg);
-            return new SubScopeInstance<>(context.processScopeProvider(), typeName, typeArg);
+            return new SubScopeInstance<>(context.scopeRegistry(), typeName, typeArg);
         }
         if (Provider.class.isAssignableFrom(rawType)) {
             Class<Object> typeArg = (Class<Object>) extractTypeArgument(genericType);
             DotName typeName = DotName.createSimple(typeArg);
-            return new SubScopeProvider<>(context.processScopeProvider(), typeName, typeArg);
+            return new SubScopeProvider<>(context.scopeRegistry(), typeName, typeArg);
         }
         if (Context.class.isAssignableFrom(rawType)) {
             if(DependentProviderStack.isInExtension()) {

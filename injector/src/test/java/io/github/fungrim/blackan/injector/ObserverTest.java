@@ -11,7 +11,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import io.github.fungrim.blackan.injector.context.RootContext;
 import io.github.fungrim.blackan.injector.util.stubs.AppGreeting;
 import io.github.fungrim.blackan.injector.util.stubs.AsyncObserverBean;
 import io.github.fungrim.blackan.injector.util.stubs.Greeting;
@@ -27,7 +26,7 @@ class ObserverTest {
 
         @Test
         void firesEventToSyncObserver() throws IOException {
-            RootContext root = RootContext.builder()
+            Context root = Context.builder()
                     .withClasses(List.of(SyncObserverBean.class))
                     .withScopeProvider(() -> currentContext.get())
                     .build();
@@ -41,7 +40,7 @@ class ObserverTest {
 
         @Test
         void firesMultipleEventsToSyncObserver() throws IOException {
-            RootContext root = RootContext.builder()
+            Context root = Context.builder()
                     .withClasses(List.of(SyncObserverBean.class))
                     .withScopeProvider(() -> currentContext.get())
                     .build();
@@ -56,7 +55,7 @@ class ObserverTest {
 
         @Test
         void observerMethodCanHaveInjectedParameters() throws IOException {
-            RootContext root = RootContext.builder()
+            Context root = Context.builder()
                     .withClasses(List.of(
                             Greeting.class, AppGreeting.class,
                             ObserverWithInjectionBean.class))
@@ -72,7 +71,7 @@ class ObserverTest {
 
         @Test
         void nonMatchingEventTypeIsNotObserved() throws IOException {
-            RootContext root = RootContext.builder()
+            Context root = Context.builder()
                     .withClasses(List.of(SyncObserverBean.class))
                     .withScopeProvider(() -> currentContext.get())
                     .build();
@@ -90,7 +89,7 @@ class ObserverTest {
 
         @Test
         void firesEventToAsyncObserver() throws Exception {
-            RootContext root = RootContext.builder()
+            Context root = Context.builder()
                     .withClasses(List.of(AsyncObserverBean.class))
                     .withScopeProvider(() -> currentContext.get())
                     .build();
@@ -105,7 +104,7 @@ class ObserverTest {
 
         @Test
         void syncObserverDoesNotReceiveAsyncEvent() throws IOException {
-            RootContext root = RootContext.builder()
+            Context root = Context.builder()
                     .withClasses(List.of(SyncObserverBean.class))
                     .withScopeProvider(() -> currentContext.get())
                     .build();

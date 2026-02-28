@@ -13,7 +13,7 @@ import io.github.fungrim.blackan.common.api.Initializable;
 import io.github.fungrim.blackan.common.api.Service;
 import io.github.fungrim.blackan.common.api.Stage;
 import io.github.fungrim.blackan.common.api.Startable;
-import io.github.fungrim.blackan.injector.context.RootContext;
+import io.github.fungrim.blackan.injector.Context;
 import io.github.fungrim.blackan.runtime.stubs.ApplicationStageService;
 import io.github.fungrim.blackan.runtime.stubs.BootstrapService;
 import io.github.fungrim.blackan.runtime.stubs.CoreStageService;
@@ -26,7 +26,7 @@ class RuntimeControllerTest {
     @BeforeEach
     void setup() throws IOException {
         LifecycleLog.reset();
-        RootContext root = RootContext.builder()
+        Context root = Context.builder()
                 .withClasses(List.of(
                         Service.class,
                         Initializable.class,

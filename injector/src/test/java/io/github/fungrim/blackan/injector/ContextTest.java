@@ -17,7 +17,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import io.github.fungrim.blackan.injector.context.RootContext;
 import io.github.fungrim.blackan.injector.creator.ConstructionException;
 import io.github.fungrim.blackan.injector.util.stubs.AmbiguousInstanceBean;
 import io.github.fungrim.blackan.injector.util.stubs.AppGreeting;
@@ -60,13 +59,13 @@ class ContextTest {
 
     private final AtomicReference<Context> currentContext = new AtomicReference<>();
 
-    private RootContext root;
+    private Context root;
 
     @BeforeEach
     void setup() throws IOException {
         SessionDataImpl.resetCounter();
         RequestInfoImpl.resetCounter();
-        root = RootContext.builder()
+        root = Context.builder()
                 .withClasses(List.of(
                         Greeting.class,
                         AppGreeting.class,

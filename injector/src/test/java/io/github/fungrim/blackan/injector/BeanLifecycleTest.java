@@ -12,7 +12,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import io.github.fungrim.blackan.injector.context.RootContext;
 import io.github.fungrim.blackan.injector.util.stubs.BeanWithDependentDep;
 import io.github.fungrim.blackan.injector.util.stubs.DependentLifecycleBean;
 import io.github.fungrim.blackan.injector.util.stubs.LifecycleOrderTracker;
@@ -30,7 +29,7 @@ class BeanLifecycleTest {
 
         @Test
         void postConstructIsCalledAfterInjection() throws IOException {
-            RootContext root = RootContext.builder()
+            Context root = Context.builder()
                     .withClasses(List.of(PostConstructBean.class))
                     .withScopeProvider(() -> currentContext.get())
                     .build();
@@ -42,7 +41,7 @@ class BeanLifecycleTest {
 
         @Test
         void postConstructIsCalledOnDependentBean() throws IOException {
-            RootContext root = RootContext.builder()
+            Context root = Context.builder()
                     .withClasses(List.of(DependentLifecycleBean.class, BeanWithDependentDep.class))
                     .withScopeProvider(() -> currentContext.get())
                     .build();
@@ -58,7 +57,7 @@ class BeanLifecycleTest {
 
         @Test
         void preDestroyIsCalledOnContextClose() throws IOException {
-            RootContext root = RootContext.builder()
+            Context root = Context.builder()
                     .withClasses(List.of(PostConstructBean.class))
                     .withScopeProvider(() -> currentContext.get())
                     .build();
@@ -73,7 +72,7 @@ class BeanLifecycleTest {
 
         @Test
         void preDestroyIsCalledOnDependentBeanWhenContextCloses() throws IOException {
-            RootContext root = RootContext.builder()
+            Context root = Context.builder()
                     .withClasses(List.of(DependentLifecycleBean.class, BeanWithDependentDep.class))
                     .withScopeProvider(() -> currentContext.get())
                     .build();
@@ -88,7 +87,7 @@ class BeanLifecycleTest {
 
         @Test
         void preDestroyIsCalledOnSessionScopedBeanWhenSessionCloses() throws IOException {
-            RootContext root = RootContext.builder()
+            Context root = Context.builder()
                     .withClasses(List.of(SessionLifecycleBean.class))
                     .withScopeProvider(() -> currentContext.get())
                     .build();
@@ -116,7 +115,7 @@ class BeanLifecycleTest {
 
         @Test
         void normalScopeBeanIsDestroyedBeforeItsDependentDependency() throws IOException {
-            RootContext root = RootContext.builder()
+            Context root = Context.builder()
                     .withClasses(List.of(OrderedDestroyParent.class, OrderedDestroyDependent.class))
                     .withScopeProvider(() -> currentContext.get())
                     .build();
@@ -137,7 +136,7 @@ class BeanLifecycleTest {
 
         @Test
         void destructionOrderIsReverseOfCreationOrder() throws IOException {
-            RootContext root = RootContext.builder()
+            Context root = Context.builder()
                     .withClasses(List.of(OrderedDestroyParent.class, OrderedDestroyDependent.class))
                     .withScopeProvider(() -> currentContext.get())
                     .build();
