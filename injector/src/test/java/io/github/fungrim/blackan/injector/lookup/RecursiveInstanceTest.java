@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.jboss.jandex.ClassInfo;
+import org.jboss.jandex.DotName;
 import org.jboss.jandex.Index;
 import org.jboss.jandex.Indexer;
 import org.junit.jupiter.api.BeforeAll;
@@ -60,6 +61,9 @@ class RecursiveInstanceTest {
         }
 
         @Override
+        public void evict(DotName type) {}
+
+        @Override
         public void close() {}
     };
 
@@ -68,6 +72,10 @@ class RecursiveInstanceTest {
         public LimitedInstance create(RecursionKey key, Collection<ClassInfo> filteredCandidates) {
             return new RecursiveInstance(key, filteredCandidates, CREATOR_FACTORY, this);
         }
+
+        @Override
+        public void evict(DotName type) {}
+
         @Override
         public void close() {}
     };

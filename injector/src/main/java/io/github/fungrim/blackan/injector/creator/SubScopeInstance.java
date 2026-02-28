@@ -54,7 +54,7 @@ public class SubScopeInstance<T> implements Instance<T> {
 
     @Override
     public void destroy(T instance) {
-        throw new UnsupportedOperationException("destroy not supported on SubscopeInstance");
+        current().destroy(type);
     }
 
     @Override

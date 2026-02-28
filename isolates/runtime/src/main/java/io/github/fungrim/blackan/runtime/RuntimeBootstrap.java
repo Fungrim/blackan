@@ -7,6 +7,7 @@ import org.jboss.jandex.IndexView;
 import io.github.fungrim.blackan.bootstrap.classloader.RuntimeClassLoader;
 import io.github.fungrim.blackan.injector.Context;
 import io.github.fungrim.blackan.runtime.jandex.CompositeIndexViewFactory;
+import io.github.fungrim.blackan.runtime.util.StageAndPriorityComparator;
 
 public class RuntimeBootstrap {
 
@@ -19,6 +20,7 @@ public class RuntimeBootstrap {
             indexView.getKnownClasses().forEach(c -> System.out.println(" - " + c.name().toString()));
             Context context = Context.builder()
                 .withIndex(indexView)
+                .withEventOrdering(new StageAndPriorityComparator())
                 .build();
             new RuntimeController(context).run();
         } else {

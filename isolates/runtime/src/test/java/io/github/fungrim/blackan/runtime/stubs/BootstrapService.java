@@ -1,31 +1,33 @@
 package io.github.fungrim.blackan.runtime.stubs;
 
 import io.github.fungrim.blackan.common.api.BootStage;
-import io.github.fungrim.blackan.common.api.Service;
 import io.github.fungrim.blackan.common.api.Stage;
+import io.github.fungrim.blackan.common.cdi.RuntimeStartEvent;
+import io.github.fungrim.blackan.common.cdi.RuntimeStopEvent;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Observes;
 
 @ApplicationScoped
 @BootStage(Stage.BOOTSTRAP)
-public class BootstrapService implements Service {
+public class BootstrapService {
 
-    @Override
+    @PostConstruct
     public void init() {
         LifecycleLog.record("bootstrap:init");
     }
 
-    @Override
+    @PreDestroy
     public void destroy() {
         LifecycleLog.record("bootstrap:destroy");
     }
 
-    @Override
-    public void start() {
+    public void start(@Observes RuntimeStartEvent event) {
         LifecycleLog.record("bootstrap:start");
     }
 
-    @Override
-    public void stop() {
+    public void stop(@Observes RuntimeStopEvent event) {
         LifecycleLog.record("bootstrap:stop");
     }
 }

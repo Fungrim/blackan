@@ -181,7 +181,7 @@ public class RecursiveInstance implements LimitedInstance {
 
             @Override
             public void destroy(T instance) {
-                throw new UnsupportedOperationException("Unimplemented method 'destroy'");
+                // no-op: use Context.destroy() for full lifecycle + cache clearing
             }
 
             @Override

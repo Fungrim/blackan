@@ -3,4 +3,4 @@ plugins {
 }
 
 rootProject.name = 'blackan'
-include 'common', 'injector', 'isolates:bootstrap', 'isolates:runtime', 'isolates:testjar', 'plugins:gradle', 'extensions:bootstrap:slf4j'
+include 'common', 'injector', 'isolates:bootstrap', 'isolates:runtime', 'plugins:gradle', 'extensions:bootstrap:slf4j'

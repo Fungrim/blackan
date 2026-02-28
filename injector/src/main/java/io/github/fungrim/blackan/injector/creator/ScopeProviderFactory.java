@@ -57,6 +57,16 @@ public class ScopeProviderFactory implements ProviderFactory {
     }
 
     @Override
+    public void evict(DotName type) {
+        lock.writeLock().lock();
+        try {
+            cache.entrySet().removeIf(e -> e.getKey().name().equals(type));
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    @Override
     public void close() {
         cache.clear();
     }

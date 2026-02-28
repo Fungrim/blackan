@@ -7,22 +7,16 @@ import org.jboss.jandex.ClassInfo;
 
 import io.github.fungrim.blackan.common.api.BootStage;
 import io.github.fungrim.blackan.common.api.Stage;
-import io.github.fungrim.blackan.injector.lookup.LimitedInstance;
 import jakarta.annotation.Priority;
 
-public class StageAndPriorityComparator implements Comparator<LimitedInstance> {
+public class StageAndPriorityComparator implements Comparator<ClassInfo> {
 
     @Override
-    public int compare(LimitedInstance o1, LimitedInstance o2) {
-        if(!o1.isResolvable() || !o2.isResolvable()) {
-            return 0;
-        }
-        ClassInfo c1 = o1.getCandidate();
-        ClassInfo c2 = o2.getCandidate();
-        Stage s1 = extractStage(c1);
-        Stage s2 = extractStage(c2);
+    public int compare(ClassInfo o1, ClassInfo o2) {
+        Stage s1 = extractStage(o1);
+        Stage s2 = extractStage(o2);
         if(s1.order().compareTo(s2.order()) == 0) {
-            return extractPriority(c1).compareTo(extractPriority(c2));
+            return extractPriority(o1).compareTo(extractPriority(o2));
         } else {
             return s1.order().compareTo(s2.order());
         }

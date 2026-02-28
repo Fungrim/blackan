@@ -3,34 +3,36 @@ package io.github.fungrim.blackan.test;
 import org.slf4j.Logger;
 
 import io.github.fungrim.blackan.common.api.BootStage;
-import io.github.fungrim.blackan.common.api.Service;
 import io.github.fungrim.blackan.common.api.Stage;
+import io.github.fungrim.blackan.common.cdi.RuntimeStartEvent;
+import io.github.fungrim.blackan.common.cdi.RuntimeStopEvent;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import jakarta.annotation.Priority;
+import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
 
 @Priority(100)
 @BootStage(Stage.APPLICATION)
-public class HelloWorldService implements Service {
+public class HelloWorldService {
 
     @Inject
     Logger logger;
 
-    @Override
-    public void start() {
+    public void start(@Observes RuntimeStartEvent event) {
         logger.info("Hello World Service started");
     }
 
-    @Override
-    public void stop() {
+    public void stop(@Observes RuntimeStopEvent event) {
         logger.info("Hello World Service stopped");
     }
 
-    @Override
+    @PostConstruct
     public void init() {
         logger.info("Hello World Service initialized");
     }
 
-    @Override
+    @PreDestroy
     public void destroy() {
         logger.info("Hello World Service destroyed");
     }

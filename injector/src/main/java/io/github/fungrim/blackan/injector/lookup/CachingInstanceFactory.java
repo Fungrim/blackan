@@ -7,6 +7,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.jboss.jandex.ClassInfo;
+import org.jboss.jandex.DotName;
 
 import io.github.fungrim.blackan.injector.creator.ProviderFactory;
 
@@ -30,6 +31,16 @@ public class CachingInstanceFactory implements InstanceFactory{
         }
     }
     
+    @Override
+    public void evict(DotName type) {
+        lock.writeLock().lock();
+        try {
+            cache.entrySet().removeIf(e -> e.getKey().type().equals(type));
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
     @Override
     public void close() {
         cache.clear();

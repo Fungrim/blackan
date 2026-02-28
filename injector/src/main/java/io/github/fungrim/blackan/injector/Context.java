@@ -316,7 +316,19 @@ public class Context implements Closeable {
     public void fire(Object event, Annotation... qualifiers) {
         checkClosed();
         List<org.jboss.jandex.AnnotationInstance> jandexQualifiers = EventCoordinator.toJandexQualifiers(qualifiers);
+        EventCoordinator.fireObservers(this, observerRegistry.matchSync(event, jandexQualifiers, (a, b) -> 0), event);
+    }
+
+    public void fireInOrder(Object event, Annotation... qualifiers) {
+        checkClosed();
+        List<org.jboss.jandex.AnnotationInstance> jandexQualifiers = EventCoordinator.toJandexQualifiers(qualifiers);
         EventCoordinator.fireObservers(this, observerRegistry.matchSync(event, jandexQualifiers, eventOrdering), event);
+    }
+
+    public void fireInReverseOrder(Object event, Annotation... qualifiers) {
+        checkClosed();
+        List<org.jboss.jandex.AnnotationInstance> jandexQualifiers = EventCoordinator.toJandexQualifiers(qualifiers);
+        EventCoordinator.fireObservers(this, observerRegistry.matchSync(event, jandexQualifiers, eventOrdering.reversed()), event);
     }
 
     public CompletionStage<Object> fireAsync(Object event, Annotation... qualifiers) {
@@ -368,6 +380,25 @@ public class Context implements Closeable {
     public <T> T get(Class<T> type) {
         Arguments.notNull(type, "Type");
         return getInstance(type).get(type);
+    }
+
+    // --- Destroy ---
+
+    public void destroy(DotName type) {
+        Arguments.notNull(type, "Type");
+        destroyableTracker.destroyByType(type, classLoader);
+        creatorFactory.evict(type);
+        instanceFactory.evict(type);
+    }
+
+    public void destroy(ClassInfo type) {
+        Arguments.notNull(type, "Type");
+        destroy(type.name());
+    }
+
+    public void destroy(Class<?> type) {
+        Arguments.notNull(type, "Type");
+        destroy(DotName.createSimple(type));
     }
 
     // --- Class loading ---

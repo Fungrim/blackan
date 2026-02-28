@@ -3,6 +3,7 @@ package io.github.fungrim.blackan.injector.creator;
 import java.util.Optional;
 
 import org.jboss.jandex.ClassInfo;
+import org.jboss.jandex.DotName;
 
 import jakarta.inject.Provider;
 
@@ -13,6 +14,8 @@ public interface ProviderFactory {
     }
 
     public <T> Provider<T> create(ClassInfo type, Optional<InjectionLocation<T>> location, Class<T> clazzType);
+
+    void evict(DotName type);
 
     void close();
 
