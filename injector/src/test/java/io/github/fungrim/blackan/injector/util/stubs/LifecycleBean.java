@@ -4,22 +4,20 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.context.BeforeDestroyed;
 import jakarta.enterprise.context.Destroyed;
 import jakarta.enterprise.context.Initialized;
+import jakarta.enterprise.event.Observes;
 
 @ApplicationScoped
 public class LifecycleBean {
 
-    @Initialized(ApplicationScoped.class)
-    public void onInitialized() {
+    public void onInitialized(@Observes @Initialized(ApplicationScoped.class) Object event) {
         LifecycleOrderTracker.record(LifecycleBean.class, "initialized");
     }
 
-    @BeforeDestroyed(ApplicationScoped.class)
-    public void onBeforeDestroyed() {
+    public void onBeforeDestroyed(@Observes @BeforeDestroyed(ApplicationScoped.class) Object event) {
         LifecycleOrderTracker.record(LifecycleBean.class, "beforeDestroyed");
     }
 
-    @Destroyed(ApplicationScoped.class)
-    public void onDestroyed() {
+    public void onDestroyed(@Observes @Destroyed(ApplicationScoped.class) Object event) {
         LifecycleOrderTracker.record(LifecycleBean.class, "destroyed");
     }
 }

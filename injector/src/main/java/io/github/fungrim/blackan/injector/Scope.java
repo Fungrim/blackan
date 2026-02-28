@@ -20,11 +20,11 @@ import jakarta.inject.Singleton;
 
 public enum Scope {
 
-    APPLICATION(1),
-    SESSION(2),
-    REQUEST(3),
-    DEPENDENT(-1),
-    SINGLETON(-1);
+    APPLICATION(1, DotName.createSimple(ApplicationScoped.class)),
+    SESSION(2, DotName.createSimple(SessionScoped.class)),
+    REQUEST(3, DotName.createSimple(RequestScoped.class)),
+    DEPENDENT(-1, DotName.createSimple(Dependent.class)),
+    SINGLETON(-1, DotName.createSimple(Singleton.class));
 
     public static Optional<Scope> from(Annotation annotation) {
         return from(annotation.annotationType());
@@ -115,13 +115,29 @@ public enum Scope {
     }
 
     private final int priority;
+    private final DotName annotationName;
 
-    Scope(int priority) {
+    Scope(int priority, DotName annotationName) {
         this.priority = priority;
+        this.annotationName = annotationName;
     }
 
     public int priority() {
         return priority;
+    }
+
+    public DotName annotationName() {
+        return annotationName;
+    }
+
+    public Class<? extends Annotation> annotationClass() {
+        return switch (this) {
+            case APPLICATION -> ApplicationScoped.class;
+            case SESSION -> SessionScoped.class;
+            case REQUEST -> RequestScoped.class;
+            case DEPENDENT -> Dependent.class;
+            case SINGLETON -> Singleton.class;
+        };
     }
 
     public boolean isPseudoScope() {

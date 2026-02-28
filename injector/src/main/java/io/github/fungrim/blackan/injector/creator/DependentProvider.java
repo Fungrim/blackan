@@ -20,6 +20,8 @@ public class DependentProvider<T> implements Provider<T> {
             T instance = ConstructorInvocation.of(context, clazz).create();
             FieldInvocation.of(context, instance).forEach(FieldInvocation::set);
             MethodInvocation.of(context, instance).forEach(MethodInvocation::invoke);
+            BeanLifecycle.invokePostConstruct(instance);
+            context.destroyableTracker().register(instance);
             return instance;
         });
     }

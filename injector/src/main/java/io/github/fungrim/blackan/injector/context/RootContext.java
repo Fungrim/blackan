@@ -3,6 +3,8 @@ package io.github.fungrim.blackan.injector.context;
 import java.io.IOException;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.Index;
@@ -16,8 +18,8 @@ import io.github.fungrim.blackan.injector.producer.ProducerRegistry;
 
 public class RootContext extends ContextImpl {
 
-    private RootContext(IndexView index, Scope scope, ClassLoader classLoader, ProcessScopeProvider scopeProvider, Comparator<ClassInfo> eventOrdering) {
-        super(index, null, scope, classLoader, scopeProvider, new ProducerRegistry(), eventOrdering);
+    private RootContext(IndexView index, Scope scope, ClassLoader classLoader, ProcessScopeProvider scopeProvider, Comparator<ClassInfo> eventOrdering, ExecutorService executorService, Object lifecycleEventPayload) {
+        super(index, null, scope, classLoader, scopeProvider, new ProducerRegistry(), eventOrdering, executorService, lifecycleEventPayload);
     }
 
     public static class Builder {
@@ -27,6 +29,8 @@ public class RootContext extends ContextImpl {
         private ClassLoader classLoader;
         private ProcessScopeProvider scopeProvider;
         private Comparator<ClassInfo> eventOrdering;
+        private ExecutorService executorService;
+        private Object lifecycleEventPayload;
 
         public Builder withEventOrdering(Comparator<ClassInfo> eventOrdering) {
             this.eventOrdering = eventOrdering;
@@ -50,6 +54,16 @@ public class RootContext extends ContextImpl {
 
         public Builder withIndex(IndexView index) {
             this.index = index;
+            return this;
+        }
+
+        public Builder withExecutorService(ExecutorService executorService) {
+            this.executorService = executorService;
+            return this;
+        }
+
+        public Builder withLifecycleEventPayload(Object lifecycleEventPayload) {
+            this.lifecycleEventPayload = lifecycleEventPayload;
             return this;
         }
      
@@ -76,7 +90,14 @@ public class RootContext extends ContextImpl {
             if(eventOrdering == null) {
                 eventOrdering = (a, b) -> 0;
             }
-            return new RootContext(index, Scope.APPLICATION, classLoader, scopeProvider, eventOrdering);
+            if(executorService == null) {
+                executorService = Executors.newCachedThreadPool(r -> {
+                    Thread t = new Thread(r, "blackan-observer");
+                    t.setDaemon(true);
+                    return t;
+                });
+            }
+            return new RootContext(index, Scope.APPLICATION, classLoader, scopeProvider, eventOrdering, executorService, lifecycleEventPayload);
         }
     }
 

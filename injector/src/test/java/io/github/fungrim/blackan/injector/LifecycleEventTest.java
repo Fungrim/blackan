@@ -1,6 +1,8 @@
 package io.github.fungrim.blackan.injector;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -11,14 +13,17 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import io.github.fungrim.blackan.injector.context.RootContext;
+import io.github.fungrim.blackan.injector.util.stubs.AppGreeting;
+import io.github.fungrim.blackan.injector.util.stubs.Greeting;
 import io.github.fungrim.blackan.injector.util.stubs.LifecycleBean;
+import io.github.fungrim.blackan.injector.util.stubs.LifecycleBeanWithInjection;
 import io.github.fungrim.blackan.injector.util.stubs.LifecycleOrderTracker;
+import io.github.fungrim.blackan.injector.util.stubs.RequestScopedLifecycleBean;
 import io.github.fungrim.blackan.injector.util.stubs.SecondLifecycleBean;
 
 class LifecycleEventTest {
@@ -114,6 +119,79 @@ class LifecycleEventTest {
             assertTrue(firstIdx >= 0, "LifecycleBean.initialized should be present");
             assertTrue(secondIdx < firstIdx,
                     "SecondLifecycleBean (@Priority(1)) should fire before LifecycleBean (no priority)");
+        }
+    }
+
+    @Nested
+    class QualifierFiltering {
+
+        @BeforeEach
+        void setup() {
+            LifecycleOrderTracker.reset();
+        }
+
+        @Test
+        void requestScopedEventDoesNotFireInApplicationContext() throws IOException {
+            RootContext root = RootContext.builder()
+                    .withClasses(List.of(RequestScopedLifecycleBean.class))
+                    .withScopeProvider(() -> currentContext.get())
+                    .build();
+            currentContext.set(root);
+
+            assertFalse(LifecycleOrderTracker.events().contains("RequestScopedLifecycleBean.initialized"),
+                    "@Initialized(RequestScoped.class) should not fire in an application-scoped context");
+        }
+
+        @Test
+        void requestScopedEventFiresInRequestContext() throws IOException {
+            RootContext root = RootContext.builder()
+                    .withClasses(List.of(RequestScopedLifecycleBean.class))
+                    .withScopeProvider(() -> currentContext.get())
+                    .build();
+            currentContext.set(root);
+
+            Context session = root.subcontext(Scope.SESSION);
+            Context request = session.subcontext(Scope.REQUEST);
+            currentContext.set(request);
+
+            assertTrue(LifecycleOrderTracker.events().contains("RequestScopedLifecycleBean.initialized"),
+                    "@Initialized(RequestScoped.class) should fire in a request-scoped context");
+        }
+
+        @Test
+        void applicationScopedEventDoesNotFireInRequestContext() throws IOException {
+            RootContext root = RootContext.builder()
+                    .withClasses(List.of(LifecycleBean.class))
+                    .withScopeProvider(() -> currentContext.get())
+                    .build();
+            currentContext.set(root);
+            LifecycleOrderTracker.reset();
+
+            Context session = root.subcontext(Scope.SESSION);
+            Context request = session.subcontext(Scope.REQUEST);
+            currentContext.set(request);
+
+            assertFalse(LifecycleOrderTracker.events().contains("LifecycleBean.initialized"),
+                    "@Initialized(ApplicationScoped.class) should not fire again in a request-scoped context");
+        }
+    }
+
+    @Nested
+    class ParameterInjection {
+
+        @Test
+        void lifecycleEventMethodCanHaveInjectedParameters() throws IOException {
+            RootContext root = RootContext.builder()
+                    .withClasses(List.of(
+                            Greeting.class, AppGreeting.class,
+                            LifecycleBeanWithInjection.class))
+                    .withScopeProvider(() -> currentContext.get())
+                    .build();
+            currentContext.set(root);
+
+            LifecycleBeanWithInjection bean = root.get(LifecycleBeanWithInjection.class);
+            assertNotNull(bean.greetingValue);
+            assertEquals("hello from app", bean.greetingValue);
         }
     }
 }

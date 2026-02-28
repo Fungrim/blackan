@@ -24,6 +24,7 @@ class DependentProviderTest {
     @SuppressWarnings("unchecked")
     private static Context mockContextForAny(Object... values) {
         Context context = mock(Context.class);
+        when(context.destroyableTracker()).thenReturn(new DestroyableTracker());
         int[] index = {0};
         when(context.getInstance(any(DotName.class))).thenAnswer(invocation -> {
             LimitedInstance instance = mock(LimitedInstance.class);
@@ -43,6 +44,7 @@ class DependentProviderTest {
         @Test
         void createsSimpleBean() {
             Context context = mock(Context.class);
+            when(context.destroyableTracker()).thenReturn(new DestroyableTracker());
             var creator = new DependentProvider<>(context, mock(ClassInfo.class), NoArgBean.class);
             var result = creator.get();
             assertInstanceOf(NoArgBean.class, result);

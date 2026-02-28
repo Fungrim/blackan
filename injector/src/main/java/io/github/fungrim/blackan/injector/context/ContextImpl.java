@@ -1,10 +1,13 @@
 package io.github.fungrim.blackan.injector.context;
 
+import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.jboss.jandex.AnnotationInstance;
@@ -12,15 +15,17 @@ import org.jboss.jandex.AnnotationTarget;
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.IndexView;
-import org.jboss.jandex.MethodInfo;
 
+import io.github.fungrim.blackan.common.cdi.DefaultLifecycleEvent;
 import io.github.fungrim.blackan.common.util.Arguments;
 import io.github.fungrim.blackan.injector.Context;
 import io.github.fungrim.blackan.injector.Scope;
 import io.github.fungrim.blackan.injector.creator.ConstructionException;
+import io.github.fungrim.blackan.injector.creator.DestroyableTracker;
 import io.github.fungrim.blackan.injector.creator.ProviderFactory;
 import io.github.fungrim.blackan.injector.creator.ScopeProviderFactory;
 import io.github.fungrim.blackan.injector.event.EventCoordinator;
+import io.github.fungrim.blackan.injector.event.ObserverRegistry;
 import io.github.fungrim.blackan.injector.lookup.CachingInstanceFactory;
 import io.github.fungrim.blackan.injector.lookup.InstanceFactory;
 import io.github.fungrim.blackan.injector.lookup.LimitedInstance;
@@ -34,9 +39,6 @@ import jakarta.enterprise.inject.Produces;
 public class ContextImpl implements Context {
 
     private static final DotName PRODUCES = DotName.createSimple(Produces.class);
-    private static final DotName INITIALIZED = DotName.createSimple(Initialized.class);
-    private static final DotName BEFORE_DESTROYED = DotName.createSimple(BeforeDestroyed.class);
-    private static final DotName DESTROYED = DotName.createSimple(Destroyed.class);
 
     private final AtomicBoolean isClosed = new AtomicBoolean(false);
 
@@ -49,10 +51,10 @@ public class ContextImpl implements Context {
     protected final ProcessScopeProvider scopeProvider;
     protected final ProducerRegistry producerRegistry;
     protected final Comparator<ClassInfo> eventOrdering;
-
-    private List<MethodInfo> initializedMethods;
-    private List<MethodInfo> beforeDestroyedMethods;
-    private List<MethodInfo> destroyedMethods;
+    protected final ExecutorService executorService;
+    protected final ObserverRegistry observerRegistry;
+    protected final Object lifecycleEventPayload;
+    protected final DestroyableTracker destroyableTracker = new DestroyableTracker();
 
     public ContextImpl(
             IndexView index, 
@@ -61,13 +63,17 @@ public class ContextImpl implements Context {
             ClassLoader classLoader, 
             ProcessScopeProvider scopeProvider, 
             ProducerRegistry producerRegistry, 
-            Comparator<ClassInfo> eventOrdering
+            Comparator<ClassInfo> eventOrdering,
+            ExecutorService executorService,
+            Object lifecycleEventPayload
         ) {
         this.index = index;
         this.parent = parent;
         this.scope = scope;
         this.classLoader = classLoader;
         this.producerRegistry = producerRegistry;
+        this.executorService = executorService;
+        this.lifecycleEventPayload = lifecycleEventPayload != null ? lifecycleEventPayload : new DefaultLifecycleEvent();
         if(scopeProvider == null) {
             this.scopeProvider = () -> this;
         } else {
@@ -80,15 +86,14 @@ public class ContextImpl implements Context {
         } else {
             this.eventOrdering = eventOrdering;
         }
+        this.observerRegistry = new ObserverRegistry();
         initialize();
     }
 
     protected void initialize() {
         scanProducers();
-        initializedMethods = scanEvents(INITIALIZED);
-        beforeDestroyedMethods = scanEvents(BEFORE_DESTROYED);
-        destroyedMethods = scanEvents(DESTROYED);
-        EventCoordinator.fire(this, initializedMethods);
+        observerRegistry.scan(index);
+        fireLifecycleEvent(Initialized.Literal.of(scope.annotationClass()));
     }
 
     protected void scanProducers() {
@@ -99,15 +104,9 @@ public class ContextImpl implements Context {
         }
     }
 
-    protected List<MethodInfo> scanEvents(DotName annotation) {
-        List<MethodInfo> methods = new ArrayList<>();
-        for (AnnotationInstance instance : index.getAnnotations(annotation)) {
-            if (instance.target().kind() == AnnotationTarget.Kind.METHOD) {
-                methods.add(instance.target().asMethod());
-            }
-        }
-        methods.sort(Comparator.comparing(MethodInfo::declaringClass, eventOrdering));
-        return methods;
+    private void fireLifecycleEvent(Annotation qualifier) {
+        List<AnnotationInstance> jandexQualifiers = EventCoordinator.toJandexQualifiers(new Annotation[]{qualifier});
+        EventCoordinator.fireObservers(this, observerRegistry.matchSync(lifecycleEventPayload, jandexQualifiers, eventOrdering), lifecycleEventPayload);
     }
 
     private final AtomicBoolean isClosing = new AtomicBoolean(false);
@@ -117,8 +116,9 @@ public class ContextImpl implements Context {
         if (!isClosing.compareAndSet(false, true)) {
             return;
         }
-        EventCoordinator.fire(this, beforeDestroyedMethods);
-        EventCoordinator.fire(this, destroyedMethods);
+        destroyableTracker.destroyAll();
+        fireLifecycleEvent(BeforeDestroyed.Literal.of(scope.annotationClass()));
+        fireLifecycleEvent(Destroyed.Literal.of(scope.annotationClass()));
         isClosed.set(true);
         producerRegistry.close();
         instanceFactory.close();
@@ -171,6 +171,30 @@ public class ContextImpl implements Context {
     public ProducerRegistry producerRegistry() {
         checkClosed();
         return producerRegistry;
+    }
+
+    @Override
+    public DestroyableTracker destroyableTracker() {
+        return destroyableTracker;
+    }
+
+    @Override
+    public ExecutorService executorService() {
+        return executorService;
+    }
+
+    @Override
+    public void fire(Object event, Annotation... qualifiers) {
+        checkClosed();
+        List<org.jboss.jandex.AnnotationInstance> jandexQualifiers = EventCoordinator.toJandexQualifiers(qualifiers);
+        EventCoordinator.fireObservers(this, observerRegistry.matchSync(event, jandexQualifiers, eventOrdering), event);
+    }
+
+    @Override
+    public CompletionStage<Object> fireAsync(Object event, Annotation... qualifiers) {
+        checkClosed();
+        List<org.jboss.jandex.AnnotationInstance> jandexQualifiers = EventCoordinator.toJandexQualifiers(qualifiers);
+        return EventCoordinator.fireObserversAsync(this, executorService, observerRegistry.matchAsync(event, jandexQualifiers, eventOrdering), event);
     }
 
     @Override
