@@ -7,5 +7,7 @@ import org.jboss.jandex.ClassInfo;
 public interface InstanceFactory {
 
     public LimitedInstance create(RecursionKey key, Collection<ClassInfo> filteredCandidates);
+    
+    public void close();
 
 }

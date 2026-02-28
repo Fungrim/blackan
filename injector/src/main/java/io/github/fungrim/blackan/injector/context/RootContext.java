@@ -1,6 +1,7 @@
 package io.github.fungrim.blackan.injector.context;
 
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.List;
 
 import org.jboss.jandex.ClassInfo;
@@ -11,23 +12,12 @@ import org.jboss.jandex.Indexer;
 import io.github.fungrim.blackan.common.util.Arguments;
 import io.github.fungrim.blackan.injector.Context;
 import io.github.fungrim.blackan.injector.Scope;
+import io.github.fungrim.blackan.injector.producer.ProducerRegistry;
 
 public class RootContext extends ContextImpl {
 
-    private RootContext(IndexView index, Scope scope, ClassLoader classLoader, ProcessScopeProvider scopeProvider) {
-        super(index, null, scope, classLoader, scopeProvider);
-        scanProducers();
-    }
-
-    private void scanProducers() {
-        for (ClassInfo classInfo : index.getKnownClasses()) {
-            try {
-                Class<?> clazz = classLoader.loadClass(classInfo.name().toString());
-                producerRegistry.scan(this, clazz);
-            } catch (ClassNotFoundException e) {
-                // skip classes that can't be loaded
-            }
-        }
+    private RootContext(IndexView index, Scope scope, ClassLoader classLoader, ProcessScopeProvider scopeProvider, Comparator<ClassInfo> eventOrdering) {
+        super(index, null, scope, classLoader, scopeProvider, new ProducerRegistry(), eventOrdering);
     }
 
     public static class Builder {
@@ -36,6 +26,12 @@ public class RootContext extends ContextImpl {
         private List<Class<?>> classes;
         private ClassLoader classLoader;
         private ProcessScopeProvider scopeProvider;
+        private Comparator<ClassInfo> eventOrdering;
+
+        public Builder withEventOrdering(Comparator<ClassInfo> eventOrdering) {
+            this.eventOrdering = eventOrdering;
+            return this;
+        }
 
         public Builder withScopeProvider(ProcessScopeProvider scopeProvider) {
             this.scopeProvider = scopeProvider;
@@ -77,7 +73,10 @@ public class RootContext extends ContextImpl {
                     classLoader = getClass().getClassLoader();
                 }
             }
-            return new RootContext(index, Scope.APPLICATION, classLoader, scopeProvider);
+            if(eventOrdering == null) {
+                eventOrdering = (a, b) -> 0;
+            }
+            return new RootContext(index, Scope.APPLICATION, classLoader, scopeProvider, eventOrdering);
         }
     }
 

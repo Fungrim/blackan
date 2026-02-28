@@ -58,6 +58,9 @@ class RecursiveInstanceTest {
                 }
             };
         }
+
+        @Override
+        public void close() {}
     };
 
     private static final InstanceFactory INSTANCE_FACTORY = new InstanceFactory() {
@@ -65,6 +68,8 @@ class RecursiveInstanceTest {
         public LimitedInstance create(RecursionKey key, Collection<ClassInfo> filteredCandidates) {
             return new RecursiveInstance(key, filteredCandidates, CREATOR_FACTORY, this);
         }
+        @Override
+        public void close() {}
     };
 
     @BeforeAll

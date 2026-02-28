@@ -14,4 +14,6 @@ public interface ProviderFactory {
 
     public <T> Provider<T> create(ClassInfo type, Optional<InjectionLocation<T>> location, Class<T> clazzType);
 
+    void close();
+
 }

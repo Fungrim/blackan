@@ -56,6 +56,11 @@ public class ScopeProviderFactory implements ProviderFactory {
         }
     }
 
+    @Override
+    public void close() {
+        cache.clear();
+    }
+
     private boolean isInjectionLegal(Scope scope, ClassInfo type) {
         if(scope == Scope.DEPENDENT || scope.priority() == context.scope().priority()) {
             // you can always inject a dependent or same scope 

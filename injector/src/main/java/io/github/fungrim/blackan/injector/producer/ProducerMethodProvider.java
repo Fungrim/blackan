@@ -33,7 +33,9 @@ public class ProducerMethodProvider<T> implements Provider<T> {
             Object owner = context.get(declaringClass);
             Object[] args = InvocationUtil.resolveParameters(context, parameterKeys, genericParameterTypes);
             method.setAccessible(true);
-            return (T) method.invoke(owner, args);
+            T t = (T) method.invoke(owner, args);
+            method.setAccessible(false);
+            return t;
         } catch (Exception e) {
             throw new ConstructionException(
                     "Failed to invoke producer method " + declaringClass.getName() + "." + method.getName(), e);

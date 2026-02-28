@@ -1,5 +1,7 @@
 package io.github.fungrim.blackan.injector;
 
+import java.io.Closeable;
+import java.util.Comparator;
 import java.util.Optional;
 
 import org.jboss.jandex.ClassInfo;
@@ -17,7 +19,7 @@ import io.github.fungrim.blackan.injector.creator.ConstructionException;
 import io.github.fungrim.blackan.injector.lookup.LimitedInstance;
 import io.github.fungrim.blackan.injector.producer.ProducerRegistry;
 
-public interface Context {
+public interface Context extends Closeable {
 
     public static interface ClassAccess {
 
@@ -51,6 +53,11 @@ public interface Context {
 
     Optional<ClassAccess> findClass(DotName name);
 
+    Comparator<ClassInfo> eventOrdering();
+
+    @Override
+    void close();
+
     public default Optional<ClassAccess> findClass(Class<?> type) {
         Arguments.notNull(type, "Type");
         return findClass(DotName.createSimple(type));
@@ -63,13 +70,13 @@ public interface Context {
 
     public default Context subcontext(Scope scope) {
         Arguments.notNull(scope, "Scope");
-        return new ContextImpl(index(), this, scope, classLoader(), processScopeProvider());
+        return new ContextImpl(index(), this, scope, classLoader(), processScopeProvider(), producerRegistry(), eventOrdering());
     }
 
     public default Context subcontext(Scope scope, ClassLoader classLoader) {
         Arguments.notNull(scope, "Scope");
         Arguments.notNull(classLoader, "ClassLoader");
-        return new ContextImpl(index(), this, scope, classLoader, processScopeProvider());
+        return new ContextImpl(index(), this, scope, classLoader, processScopeProvider(), producerRegistry(), eventOrdering());
     }
 
     public default Class<?> loadClass(Class<?> type) {

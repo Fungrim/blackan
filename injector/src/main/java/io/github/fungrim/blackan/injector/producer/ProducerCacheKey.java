@@ -7,12 +7,12 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
-public record ProducerKey(
+public record ProducerCacheKey(
     Class<?> rawType,
     List<Type> typeArguments,
     List<String> qualifierNames) {
 
-    public static ProducerKey of(Type returnType, Annotation[] annotations) {
+    public static ProducerCacheKey of(Type returnType, Annotation[] annotations) {
         Class<?> raw;
         List<Type> typeArgs;
         if (returnType instanceof ParameterizedType pt) {
@@ -26,10 +26,10 @@ public record ProducerKey(
         }
         List<String> qualifiers = Arrays.stream(annotations)
                 .filter(a -> a.annotationType().isAnnotationPresent(jakarta.inject.Qualifier.class))
-                .map(ProducerKey::qualifierIdentity)
+                .map(ProducerCacheKey::qualifierIdentity)
                 .sorted()
                 .toList();
-        return new ProducerKey(raw, typeArgs, qualifiers);
+        return new ProducerCacheKey(raw, typeArgs, qualifiers);
     }
 
     private static String qualifierIdentity(Annotation annotation) {
@@ -39,7 +39,7 @@ public record ProducerKey(
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof ProducerKey other)) return false;
+        if (!(o instanceof ProducerCacheKey other)) return false;
         return rawType.equals(other.rawType)
                 && typeArguments.equals(other.typeArguments)
                 && qualifierNames.equals(other.qualifierNames);

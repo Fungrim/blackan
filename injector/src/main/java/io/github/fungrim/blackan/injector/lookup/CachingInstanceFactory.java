@@ -29,4 +29,9 @@ public class CachingInstanceFactory implements InstanceFactory{
             lock.writeLock().unlock();
         }
     }
+    
+    @Override
+    public void close() {
+        cache.clear();
+    }
 }

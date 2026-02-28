@@ -11,7 +11,7 @@ import io.github.fungrim.blackan.common.cdi.InjectionTarget;
 import io.github.fungrim.blackan.common.cdi.TargetAwareProvider;
 import io.github.fungrim.blackan.injector.Context;
 import io.github.fungrim.blackan.injector.lookup.RecursionKey;
-import io.github.fungrim.blackan.injector.producer.ProducerKey;
+import io.github.fungrim.blackan.injector.producer.ProducerCacheKey;
 import io.github.fungrim.blackan.injector.producer.ProducerRegistry;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Provider;
@@ -59,7 +59,7 @@ public class InvocationUtil {
             }
         }
         Annotation[] qualifiers = key.qualifiers().toArray(new Annotation[0]);
-        ProducerKey producerKey = ProducerKey.of(genericType, qualifiers);
+        ProducerCacheKey producerKey = ProducerCacheKey.of(genericType, qualifiers);
         ProducerRegistry registry = context.producerRegistry();
         if (registry != null) {
             Optional<Provider<Object>> producer = registry.find(producerKey);
