@@ -1,4 +1,4 @@
-package io.github.fungrim.blackan.injector.event;
+package io.github.fungrim.blackan.common.cdi;
 
 import java.util.List;
 

@@ -1,4 +1,4 @@
-package io.github.fungrim.blackan.injector.event;
+package io.github.fungrim.blackan.injector.lookup;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -12,6 +12,7 @@ import org.jboss.jandex.IndexView;
 import org.jboss.jandex.MethodInfo;
 import org.jboss.jandex.MethodParameterInfo;
 
+import io.github.fungrim.blackan.common.cdi.ObserverMethod;
 import jakarta.enterprise.event.Observes;
 import jakarta.enterprise.event.ObservesAsync;
 
@@ -80,6 +81,14 @@ public class ObserverRegistry {
 
     public List<ObserverMethod> matchAsync(Object event, List<AnnotationInstance> qualifiers, Comparator<org.jboss.jandex.ClassInfo> classOrdering) {
         return match(event, qualifiers, true, Comparator.comparing(o -> o.method().declaringClass(), classOrdering));
+    }
+
+    public List<ObserverMethod> allObservers() {
+        return List.copyOf(observers);
+    }
+
+    public void remove(ObserverMethod observer) {
+        observers.remove(observer);
     }
 
     private List<ObserverMethod> match(Object event, List<AnnotationInstance> qualifiers, boolean async, Comparator<ObserverMethod> ordering) {

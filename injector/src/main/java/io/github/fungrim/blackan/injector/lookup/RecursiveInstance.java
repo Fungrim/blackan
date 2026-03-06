@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.ClassInfo;
@@ -31,12 +32,14 @@ public class RecursiveInstance implements LimitedInstance {
     private final ProviderFactory providerFactory;
     private final InstanceFactory instanceFactory;
     private final IndexView index;
+    private final Set<DotName> vetoedTypes;
 
-    public RecursiveInstance(RecursionKey key, ProviderFactory providerFactory, InstanceFactory instanceFactory, IndexView index) {
+    public RecursiveInstance(RecursionKey key, ProviderFactory providerFactory, InstanceFactory instanceFactory, IndexView index, Set<DotName> vetoedTypes) {
         this.key = key;
         this.providerFactory = providerFactory;
         this.instanceFactory = instanceFactory;
         this.index = index;
+        this.vetoedTypes = vetoedTypes;
         List<ClassInfo> candidates = computeCandidates();
         if (candidates.isEmpty()) {
             this.defaultCandidate = Optional.empty();
@@ -103,11 +106,9 @@ public class RecursiveInstance implements LimitedInstance {
             list.add(0, typeInfo);
             allAssignables = list;
         }
-        if (key.qualifiers().isEmpty()) {
-            return List.copyOf(allAssignables);
-        }
         return allAssignables.stream()
-                .filter(c -> matchesAllQualifiers(c, key.qualifiers()))
+                .filter(c -> !vetoedTypes.contains(c.name()))
+                .filter(c -> key.qualifiers().isEmpty() || matchesAllQualifiers(c, key.qualifiers()))
                 .toList();
     }
 

@@ -11,7 +11,7 @@ import org.jboss.jandex.DotName;
 import io.github.fungrim.blackan.common.cdi.InjectionTarget;
 import io.github.fungrim.blackan.common.cdi.TargetAwareProvider;
 import io.github.fungrim.blackan.injector.Context;
-import io.github.fungrim.blackan.injector.event.EventInjectionPoint;
+import io.github.fungrim.blackan.injector.lookup.EventInjectionPoint;
 import io.github.fungrim.blackan.injector.lookup.RecursionKey;
 import io.github.fungrim.blackan.injector.producer.ProducerCacheKey;
 import io.github.fungrim.blackan.injector.producer.ProducerRegistry;

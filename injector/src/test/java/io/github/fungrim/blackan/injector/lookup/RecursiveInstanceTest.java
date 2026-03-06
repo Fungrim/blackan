@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Optional;
+import java.util.Set;
 
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
@@ -76,12 +77,12 @@ class RecursiveInstanceTest {
         InstanceFactory localFactory = new InstanceFactory() {
             @Override
             public LimitedInstance create(RecursionKey k) {
-                return new RecursiveInstance(k, CREATOR_FACTORY, this, localIndex);
+                return new RecursiveInstance(k, CREATOR_FACTORY, this, localIndex, Set.of());
             }
             @Override public void evict(DotName t) {}
             @Override public void close() {}
         };
-        return new RecursiveInstance(key, CREATOR_FACTORY, localFactory, localIndex);
+        return new RecursiveInstance(key, CREATOR_FACTORY, localFactory, localIndex, Set.of());
     }
 
     @Nested

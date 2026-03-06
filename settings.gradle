@@ -4,7 +4,8 @@ plugins {
 
 rootProject.name = 'blackan'
 include(
-    'common', 
+    'common',
+    'cdi-common',
     'injector', 
     'isolates:bootstrap', 
     'isolates:runtime', 

@@ -2,6 +2,7 @@ package io.github.fungrim.blackan.injector.lookup;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -14,19 +15,21 @@ public class CachingInstanceFactory implements InstanceFactory{
 
     private final ProviderFactory creatorFactory;
     private final IndexView index;
+    private final Set<DotName> vetoedTypes;
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private final Map<RecursionKey, RecursiveInstance> cache = new HashMap<>();
 
-    public CachingInstanceFactory(ProviderFactory creatorFactory, IndexView index) {
+    public CachingInstanceFactory(ProviderFactory creatorFactory, IndexView index, Set<DotName> vetoedTypes) {
         this.creatorFactory = creatorFactory;
         this.index = index;
+        this.vetoedTypes = vetoedTypes;
     }
 
     @Override
     public LimitedInstance create(RecursionKey key) {
         lock.writeLock().lock();
         try {
-            return cache.computeIfAbsent(key, k -> new RecursiveInstance(key, creatorFactory, this, index));
+            return cache.computeIfAbsent(key, k -> new RecursiveInstance(key, creatorFactory, this, index, vetoedTypes));
         } finally {
             lock.writeLock().unlock();
         }

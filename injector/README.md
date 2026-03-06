@@ -130,6 +130,82 @@ public class SessionService {
 
 The same pattern applies whenever a wider scope needs access to a narrower scope — `@ApplicationScoped` to `@SessionScoped`, `@SessionScoped` to `@RequestScoped`, etc. `jakarta.enterprise.inject.Instance<T>` works the same way and additionally supports ambiguous/unsatisfied resolution checks.
 
+## Container Lifecycle Events
+
+The container fires a sequence of events during startup and shutdown. These allow you to observe and influence the bean discovery process.
+
+### Pre-scan callbacks via `ContainerListener`
+
+The `BeforeBeanDiscovery`, `ProcessAnnotatedType`, and `AfterTypeDiscovery` events fire before any observer methods are registered, so they cannot be received via `@Observes`. Register a `ContainerListener` on the builder instead:
+
+```java
+Context context = Context.builder()
+        .withClasses(List.of(MyService.class))
+        .withListener(new ContainerListener() {
+
+            @Override
+            public void beforeBeanDiscovery(BeforeBeanDiscovery event) {
+                // fires once, before any type is processed
+            }
+
+            @Override
+            public void processAnnotatedType(ProcessAnnotatedType event) {
+                // fires once per class in the index; call event.veto() to exclude
+                if (shouldExclude(event.type())) {
+                    event.veto();
+                }
+            }
+
+            @Override
+            public void afterTypeDiscovery(AfterTypeDiscovery event) {
+                // fires after all ProcessAnnotatedType callbacks
+            }
+        })
+        .build();
+```
+
+Vetoed types are invisible to the container: `getInstance()` returns an unsatisfied result and injected `Provider<T>` / `Instance<T>` will not resolve them.
+
+### Post-scan events via `@Observes`
+
+The following events fire after observer and producer scanning completes. They are delivered to `@Observes` methods in the normal way:
+
+| Event | When | Notes |
+|---|---|---|
+| `ProcessObserverMethod` | Once per discovered observer method | Call `event.veto()` to remove the observer from the registry |
+| `AfterBeanDiscovery` | After all observers and producers are scanned | |
+| `AfterDeploymentValidation` | Immediately after `AfterBeanDiscovery` | Last event before the container becomes operational |
+| `BeforeShutdown` | At the start of `Context.close()` | Fires only for the root context, before `@BeforeDestroyed` |
+
+```java
+@ApplicationScoped
+public class LifecycleObserver {
+
+    public void onAfterBeanDiscovery(@Observes AfterBeanDiscovery event) { }
+
+    public void onAfterDeploymentValidation(@Observes AfterDeploymentValidation event) { }
+
+    public void onProcessObserverMethod(@Observes ProcessObserverMethod event) {
+        // veto any observer declared on a specific class
+        if (event.observerMethod().method().declaringClass().name().toString()
+                .equals(SomeBean.class.getName())) {
+            event.veto();
+        }
+    }
+
+    public void onBeforeShutdown(@Observes BeforeShutdown event) { }
+}
+```
+
+### Deviations from CDI 2.0
+
+- **`BeforeBeanDiscovery`, `ProcessAnnotatedType`, `AfterTypeDiscovery`** are delivered via `ContainerListener`, not `@Observes`, because observer scanning has not yet occurred at that point. The CDI spec fires them to portable extensions instead.
+- **`ProcessAnnotatedType`** receives a Jandex `ClassInfo` rather than a CDI `AnnotatedType<X>`, as the container has no full reflection metadata at that stage.
+- **`ProcessObserverMethod`** receives the internal `ObserverMethod` record rather than `jakarta.enterprise.inject.spi.ObserverMethod<T>`, because the container does not implement the full `BeanManager` SPI.
+- **`ProcessBean`, `ProcessBeanAttributes`, `ProcessInjectionPoint`, `ProcessInjectionTarget`, `ProcessProducer`** are not supported.
+- **`BeforeShutdown`** fires only when the root (`ApplicationScoped`) context is closed. Closing a subcontext does not trigger it.
+- Lifecycle events for subcontexts (`AfterBeanDiscovery`, `AfterDeploymentValidation`, etc.) do not fire again when a subcontext is created — they are root-context-only events.
+
 ## CDI Compatibility
 
 Blackan Injector implements a practical subset of the CDI specification. Because there are no client proxies, lazy initialization and scope-crossing behavior differs from a full CDI container (see above).
@@ -143,6 +219,7 @@ Unsupported features include:
 - **`@Disposes`** methods for producer cleanup
 - **Portable extensions** (`Extension` SPI)
 - **Build-compatible extensions** (Build Compatible Extensions SPI)
+- **`ProcessBean`, `ProcessBeanAttributes`, `ProcessInjectionPoint`, `ProcessProducer`** lifecycle SPI events
 - **Conversation scope** (`@ConversationScoped`)
 - **`@Specializes`**
 - **`Event<T>`** injectable wrapper (use `context.fire()` directly instead)

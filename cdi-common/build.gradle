@@ -1,6 +1,7 @@
 plugins {
     id 'java-library'
     id 'maven-publish'
+    id 'org.kordamp.gradle.jandex' version '2.3.0'
 }
 
 repositories {
@@ -8,8 +9,8 @@ repositories {
 }
 
 dependencies {
-    api libs.jakarta.inject
-    api libs.cdi.spec
+    api project(':common')
+    api libs.jandex
     // test classes
     testImplementation libs.junit.jupiter
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
@@ -32,7 +33,7 @@ tasks.named('test', Test) {
 
 publishing {
     publications {
-        common(MavenPublication) {
+        cdiCommon(MavenPublication) {
             from components.java
             groupId = 'io.github.fungrim.blackan'
             version = "${semver.semver}"

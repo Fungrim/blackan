@@ -3,9 +3,12 @@ package io.github.fungrim.blackan.injector;
 import java.io.Closeable;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
@@ -20,7 +23,16 @@ import org.jboss.jandex.Index;
 import org.jboss.jandex.IndexView;
 import org.jboss.jandex.Indexer;
 
+import io.github.fungrim.blackan.common.cdi.AfterBeanDiscovery;
+import io.github.fungrim.blackan.common.cdi.AfterDeploymentValidation;
+import io.github.fungrim.blackan.common.cdi.AfterTypeDiscovery;
+import io.github.fungrim.blackan.common.cdi.BeforeBeanDiscovery;
+import io.github.fungrim.blackan.common.cdi.BeforeShutdown;
+import io.github.fungrim.blackan.common.cdi.ContainerListener;
 import io.github.fungrim.blackan.common.cdi.DefaultLifecycleEvent;
+import io.github.fungrim.blackan.common.cdi.ObserverMethod;
+import io.github.fungrim.blackan.common.cdi.ProcessAnnotatedType;
+import io.github.fungrim.blackan.common.cdi.ProcessObserverMethod;
 import io.github.fungrim.blackan.common.util.Arguments;
 import io.github.fungrim.blackan.injector.context.ClassAccessImpl;
 import io.github.fungrim.blackan.injector.context.ClassInfoAccessImpl;
@@ -31,11 +43,11 @@ import io.github.fungrim.blackan.injector.creator.ConstructionException;
 import io.github.fungrim.blackan.injector.creator.DestroyableTracker;
 import io.github.fungrim.blackan.injector.creator.ProviderFactory;
 import io.github.fungrim.blackan.injector.creator.ScopeProviderFactory;
-import io.github.fungrim.blackan.injector.event.EventCoordinator;
-import io.github.fungrim.blackan.injector.event.ObserverRegistry;
 import io.github.fungrim.blackan.injector.lookup.CachingInstanceFactory;
+import io.github.fungrim.blackan.injector.lookup.EventCoordinator;
 import io.github.fungrim.blackan.injector.lookup.InstanceFactory;
 import io.github.fungrim.blackan.injector.lookup.LimitedInstance;
+import io.github.fungrim.blackan.injector.lookup.ObserverRegistry;
 import io.github.fungrim.blackan.injector.lookup.RecursionKey;
 import io.github.fungrim.blackan.injector.producer.ProducerRegistry;
 import jakarta.enterprise.context.BeforeDestroyed;
@@ -64,17 +76,20 @@ public class Context implements Closeable {
     private final Object lifecycleEventPayload;
     private final DestroyableTracker destroyableTracker = new DestroyableTracker();
     private final ScopeRegistry scopeRegistry;
+    private final ContainerListener containerListener;
+    private final Set<DotName> vetoedTypes;
 
     private Context(
-            IndexView index, 
-            Context parent, 
-            Scope scope, 
-            ClassLoader classLoader,  
-            ProducerRegistry producerRegistry, 
+            IndexView index,
+            Context parent,
+            Scope scope,
+            ClassLoader classLoader,
+            ProducerRegistry producerRegistry,
             Comparator<ClassInfo> eventOrdering,
             ExecutorService executorService,
             Object lifecycleEventPayload,
-            ScopeRegistry scopeRegistry
+            ScopeRegistry scopeRegistry,
+            ContainerListener containerListener
         ) {
         this.index = index;
         this.parent = parent;
@@ -83,8 +98,7 @@ public class Context implements Closeable {
         this.producerRegistry = producerRegistry;
         this.executorService = executorService;
         this.lifecycleEventPayload = lifecycleEventPayload != null ? lifecycleEventPayload : new DefaultLifecycleEvent();
-        this.creatorFactory = new ScopeProviderFactory(this);
-        this.instanceFactory = new CachingInstanceFactory(creatorFactory, index);
+        this.containerListener = containerListener != null ? containerListener : new ContainerListener() {};
         if(eventOrdering == null) {
             this.eventOrdering = (a, b) -> 0;
         } else {
@@ -92,7 +106,11 @@ public class Context implements Closeable {
         }
         this.observerRegistry = new ObserverRegistry();
         this.scopeRegistry = scopeRegistry;
-        initialize();
+        Set<DotName> workingVetoedTypes = parent != null ? parent.vetoedTypes : new HashSet<>();
+        this.creatorFactory = new ScopeProviderFactory(this);
+        this.instanceFactory = new CachingInstanceFactory(creatorFactory, index, workingVetoedTypes);
+        initialize(workingVetoedTypes);
+        this.vetoedTypes = parent != null ? workingVetoedTypes : Collections.unmodifiableSet(workingVetoedTypes);
     }
 
     // --- ClassAccess interface ---
@@ -126,6 +144,7 @@ public class Context implements Closeable {
         private Comparator<ClassInfo> eventOrdering;
         private ExecutorService executorService;
         private Object lifecycleEventPayload;
+        private ContainerListener listener;
 
         public Builder withCustomEventOrdering(Comparator<ClassInfo> eventOrdering) {
             this.eventOrdering = eventOrdering;
@@ -161,6 +180,11 @@ public class Context implements Closeable {
             this.lifecycleEventPayload = lifecycleEventPayload;
             return this;
         }
+
+        public Builder withListener(ContainerListener listener) {
+            this.listener = listener;
+            return this;
+        }
      
         public Context build() throws IOException {
             if(index != null && classes != null) {
@@ -193,15 +217,16 @@ public class Context implements Closeable {
                 });
             }
             return new Context(
-                index, 
-                null, 
-                Scope.APPLICATION, 
-                classLoader, 
-                new ProducerRegistry(), 
-                eventOrdering, 
-                executorService, 
-                lifecycleEventPayload, 
-                new ScopeRegistry(scopeProvider)
+                index,
+                null,
+                Scope.APPLICATION,
+                classLoader,
+                new ProducerRegistry(),
+                eventOrdering,
+                executorService,
+                lifecycleEventPayload,
+                new ScopeRegistry(scopeProvider),
+                listener
             );
         }
     }
@@ -221,10 +246,36 @@ public class Context implements Closeable {
 
     // --- Initialization ---
 
-    private void initialize() {
+    private void initialize(Set<DotName> mutableVetoedTypes) {
+        if (parent == null) {
+            containerListener.beforeBeanDiscovery(new BeforeBeanDiscovery());
+            for (ClassInfo classInfo : index.getKnownClasses()) {
+                ProcessAnnotatedType event = new ProcessAnnotatedType(classInfo);
+                containerListener.processAnnotatedType(event);
+                if (event.isVetoed()) {
+                    mutableVetoedTypes.add(classInfo.name());
+                }
+            }
+            containerListener.afterTypeDiscovery(new AfterTypeDiscovery());
+        }
         scanProducers();
         observerRegistry.scan(index);
+        if (parent == null) {
+            for (ObserverMethod om : observerRegistry.allObservers()) {
+                ProcessObserverMethod event = new ProcessObserverMethod(om);
+                fireInternal(event);
+                if (event.isVetoed()) {
+                    observerRegistry.remove(om);
+                }
+            }
+            fireInternal(new AfterBeanDiscovery());
+            fireInternal(new AfterDeploymentValidation());
+        }
         fireLifecycleEvent(Initialized.Literal.of(scope.annotationClass()));
+    }
+
+    private void fireInternal(Object event) {
+        EventCoordinator.fireObservers(this, observerRegistry.matchSync(event, List.of()), event);
     }
 
     private void scanProducers() {
@@ -246,6 +297,9 @@ public class Context implements Closeable {
     public void close() {
         if (!isClosing.compareAndSet(false, true)) {
             return;
+        }
+        if (parent == null) {
+            fireInternal(new BeforeShutdown());
         }
         destroyableTracker.destroyAll();
         fireLifecycleEvent(BeforeDestroyed.Literal.of(scope.annotationClass()));
@@ -449,15 +503,16 @@ public class Context implements Closeable {
         Arguments.notNull(classLoader, "ClassLoader");
         Arguments.notNull(lifecycleEventPayload, "LifecycleEventPayload");
         return new Context(
-            index(), 
-            this, 
-            scope, 
-            classLoader, 
-            producerRegistry(), 
-            eventOrdering(), 
-            executorService(), 
-            lifecycleEventPayload.orElse(null), 
-            scopeRegistry);
+            index(),
+            this,
+            scope,
+            classLoader,
+            producerRegistry(),
+            eventOrdering(),
+            executorService(),
+            lifecycleEventPayload.orElse(null),
+            scopeRegistry,
+            null);
     }
 
     // --- Navigation ---

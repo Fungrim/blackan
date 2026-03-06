@@ -13,6 +13,7 @@ dependencies {
     api libs.validation.api
     api libs.jandex
     implementation project(':common')
+    implementation project(':cdi-common')
     // test classes
     testImplementation libs.junit.jupiter
     testImplementation libs.mockito

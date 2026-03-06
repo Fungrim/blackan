@@ -1,4 +1,4 @@
-package io.github.fungrim.blackan.injector.event;
+package io.github.fungrim.blackan.injector.lookup;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
@@ -11,10 +11,10 @@ import java.util.concurrent.Executor;
 import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.DotName;
 
+import io.github.fungrim.blackan.common.cdi.ObserverMethod;
 import io.github.fungrim.blackan.injector.Context;
 import io.github.fungrim.blackan.injector.creator.ConstructionException;
 import io.github.fungrim.blackan.injector.creator.InvocationUtil;
-import io.github.fungrim.blackan.injector.lookup.RecursionKey;
 import io.github.fungrim.blackan.injector.util.Jandex;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
