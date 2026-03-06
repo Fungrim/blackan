@@ -1,31 +1,32 @@
 package io.github.fungrim.blackan.injector.lookup;
 
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
+import org.jboss.jandex.IndexView;
 
 import io.github.fungrim.blackan.injector.creator.ProviderFactory;
 
 public class CachingInstanceFactory implements InstanceFactory{
 
     private final ProviderFactory creatorFactory;
+    private final IndexView index;
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private final Map<RecursionKey, RecursiveInstance> cache = new HashMap<>();
 
-    public CachingInstanceFactory(ProviderFactory creatorFactory) {
+    public CachingInstanceFactory(ProviderFactory creatorFactory, IndexView index) {
         this.creatorFactory = creatorFactory;
+        this.index = index;
     }
 
     @Override
-    public LimitedInstance create(RecursionKey key, Collection<ClassInfo> filteredCandidates) {
+    public LimitedInstance create(RecursionKey key) {
         lock.writeLock().lock();
         try {
-            return cache.computeIfAbsent(key, k -> new RecursiveInstance(key, filteredCandidates, creatorFactory, this));
+            return cache.computeIfAbsent(key, k -> new RecursiveInstance(key, creatorFactory, this, index));
         } finally {
             lock.writeLock().unlock();
         }

@@ -5,15 +5,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
-import java.util.Collection;
-import java.util.List;
 import java.util.Optional;
 
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.Index;
 import org.jboss.jandex.Indexer;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -45,8 +42,6 @@ import jakarta.inject.Provider;
 
 class RecursiveInstanceTest {
 
-    private static Index index;
-
     private static final ProviderFactory CREATOR_FACTORY = new ProviderFactory() {
         @Override
         @SuppressWarnings("unchecked")
@@ -67,45 +62,26 @@ class RecursiveInstanceTest {
         public void close() {}
     };
 
-    private static final InstanceFactory INSTANCE_FACTORY = new InstanceFactory() {
-        @Override
-        public LimitedInstance create(RecursionKey key, Collection<ClassInfo> filteredCandidates) {
-            return new RecursiveInstance(key, filteredCandidates, CREATOR_FACTORY, this);
-        }
-
-        @Override
-        public void evict(DotName type) {}
-
-        @Override
-        public void close() {}
-    };
-
-    @BeforeAll
-    static void buildIndex() throws IOException {
+    private static RecursiveInstance instance(Class<?>... stubClasses) {
         Indexer indexer = new Indexer();
-        Class<?>[] classes = {
-            PlainBean.class, PlainBeanB.class, DefaultBean.class,
-            AlternativeBean.class, HighPriorityAlternativeBean.class,
-            PriorityBean.class, HighPriorityBean.class,
-            DisabledAlternativeBean.class,
-            SamePriorityBeanA.class, SamePriorityBeanB.class,
-            SamePriorityAlternativeA.class, SamePriorityAlternativeB.class,
-            FastServiceBean.class, SlowServiceBean.class,
-            TrackedFastBean.class, TrackedSlowBean.class,
-        };
-        for (Class<?> clazz : classes) {
-            indexer.indexClass(clazz);
+        for (Class<?> clazz : stubClasses) {
+            try {
+                indexer.indexClass(clazz);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
-        index = indexer.complete();
-    }
-
-    private static ClassInfo classInfo(Class<?> clazz) {
-        return index.getClassByName(clazz);
-    }
-
-    private static RecursiveInstance instance(ClassInfo... candidates) {
+        Index localIndex = indexer.complete();
         RecursionKey key = RecursionKey.of(TestService.class);
-        return new RecursiveInstance(key, List.of(candidates), CREATOR_FACTORY, INSTANCE_FACTORY);
+        InstanceFactory localFactory = new InstanceFactory() {
+            @Override
+            public LimitedInstance create(RecursionKey k) {
+                return new RecursiveInstance(k, CREATOR_FACTORY, this, localIndex);
+            }
+            @Override public void evict(DotName t) {}
+            @Override public void close() {}
+        };
+        return new RecursiveInstance(key, CREATOR_FACTORY, localFactory, localIndex);
     }
 
     @Nested
@@ -131,7 +107,7 @@ class RecursiveInstanceTest {
 
         @Test
         void resolvesToOnlyCandidate() {
-            var inst = instance(classInfo(PlainBean.class));
+            var inst = instance(PlainBean.class);
             assertFalse(inst.isUnsatisfied());
             assertFalse(inst.isAmbiguous());
             assertTrue(inst.isResolvable());
@@ -140,14 +116,14 @@ class RecursiveInstanceTest {
 
         @Test
         void singleDefaultBean() {
-            var inst = instance(classInfo(DefaultBean.class));
+            var inst = instance(DefaultBean.class);
             assertTrue(inst.isResolvable());
             assertTrue(inst.get(TestService.class) instanceof DefaultBean);
         }
 
         @Test
         void singleAlternativeBean() {
-            var inst = instance(classInfo(AlternativeBean.class));
+            var inst = instance(AlternativeBean.class);
             assertTrue(inst.isResolvable());
             assertTrue(inst.get(TestService.class) instanceof AlternativeBean);
         }
@@ -158,14 +134,14 @@ class RecursiveInstanceTest {
 
         @Test
         void defaultBeanWinsOverPlainBeans() {
-            var inst = instance(classInfo(PlainBean.class), classInfo(DefaultBean.class));
+            var inst = instance(PlainBean.class, DefaultBean.class);
             assertTrue(inst.isResolvable());
             assertTrue(inst.get(TestService.class) instanceof DefaultBean);
         }
 
         @Test
         void defaultBeanWinsOverDisabledAlternative() {
-            var inst = instance(classInfo(DefaultBean.class), classInfo(DisabledAlternativeBean.class));
+            var inst = instance(DefaultBean.class, DisabledAlternativeBean.class);
             assertTrue(inst.isResolvable());
             assertTrue(inst.get(TestService.class) instanceof DefaultBean);
         }
@@ -176,14 +152,14 @@ class RecursiveInstanceTest {
 
         @Test
         void enabledAlternativeOverridesDefaultBean() {
-            var inst = instance(classInfo(DefaultBean.class), classInfo(AlternativeBean.class));
+            var inst = instance(DefaultBean.class, AlternativeBean.class);
             assertTrue(inst.isResolvable());
             assertTrue(inst.get(TestService.class) instanceof AlternativeBean);
         }
 
         @Test
         void enabledAlternativeOverridesPlainBean() {
-            var inst = instance(classInfo(PlainBean.class), classInfo(AlternativeBean.class));
+            var inst = instance(PlainBean.class, AlternativeBean.class);
             assertTrue(inst.isResolvable());
             assertTrue(inst.get(TestService.class) instanceof AlternativeBean);
         }
@@ -191,8 +167,8 @@ class RecursiveInstanceTest {
         @Test
         void highestPriorityAlternativeWins() {
             var inst = instance(
-                    classInfo(AlternativeBean.class),
-                    classInfo(HighPriorityAlternativeBean.class));
+                    AlternativeBean.class,
+                    HighPriorityAlternativeBean.class);
             assertTrue(inst.isResolvable());
             assertTrue(inst.get(TestService.class) instanceof HighPriorityAlternativeBean);
         }
@@ -200,10 +176,10 @@ class RecursiveInstanceTest {
         @Test
         void highestPriorityAlternativeWinsOverDefaultAndPlain() {
             var inst = instance(
-                    classInfo(DefaultBean.class),
-                    classInfo(PlainBean.class),
-                    classInfo(AlternativeBean.class),
-                    classInfo(HighPriorityAlternativeBean.class));
+                    DefaultBean.class,
+                    PlainBean.class,
+                    AlternativeBean.class,
+                    HighPriorityAlternativeBean.class);
             assertTrue(inst.isResolvable());
             assertTrue(inst.get(TestService.class) instanceof HighPriorityAlternativeBean);
         }
@@ -211,8 +187,8 @@ class RecursiveInstanceTest {
         @Test
         void disabledAlternativeDoesNotParticipate() {
             var inst = instance(
-                    classInfo(PlainBean.class),
-                    classInfo(DisabledAlternativeBean.class));
+                    PlainBean.class,
+                    DisabledAlternativeBean.class);
             // DisabledAlternative has no @Priority so doesn't count as enabled
             // Two candidates, no disambiguation possible
             assertTrue(inst.isAmbiguous());
@@ -222,8 +198,8 @@ class RecursiveInstanceTest {
         @Test
         void samePriorityAlternativesAreAmbiguous() {
             var inst = instance(
-                    classInfo(SamePriorityAlternativeA.class),
-                    classInfo(SamePriorityAlternativeB.class));
+                    SamePriorityAlternativeA.class,
+                    SamePriorityAlternativeB.class);
             assertTrue(inst.isAmbiguous());
             assertThrows(AmbiguousResolutionException.class, () -> inst.get(TestService.class));
         }
@@ -235,8 +211,8 @@ class RecursiveInstanceTest {
         @Test
         void highestPriorityWinsAmongPlainBeans() {
             var inst = instance(
-                    classInfo(PriorityBean.class),
-                    classInfo(HighPriorityBean.class));
+                    PriorityBean.class,
+                    HighPriorityBean.class);
             assertTrue(inst.isResolvable());
             assertTrue(inst.get(TestService.class) instanceof HighPriorityBean);
         }
@@ -244,9 +220,9 @@ class RecursiveInstanceTest {
         @Test
         void priorityFallbackWhenNoDefaultOrAlternative() {
             var inst = instance(
-                    classInfo(PlainBean.class),
-                    classInfo(PriorityBean.class),
-                    classInfo(HighPriorityBean.class));
+                    PlainBean.class,
+                    PriorityBean.class,
+                    HighPriorityBean.class);
             assertTrue(inst.isResolvable());
             assertTrue(inst.get(TestService.class) instanceof HighPriorityBean);
         }
@@ -254,8 +230,8 @@ class RecursiveInstanceTest {
         @Test
         void samePriorityBeansAreAmbiguous() {
             var inst = instance(
-                    classInfo(SamePriorityBeanA.class),
-                    classInfo(SamePriorityBeanB.class));
+                    SamePriorityBeanA.class,
+                    SamePriorityBeanB.class);
             assertTrue(inst.isAmbiguous());
             assertThrows(AmbiguousResolutionException.class, () -> inst.get(TestService.class));
         }
@@ -266,7 +242,7 @@ class RecursiveInstanceTest {
 
         @Test
         void multiplePlainBeansAreAmbiguous() {
-            var inst = instance(classInfo(PlainBean.class), classInfo(PlainBeanB.class));
+            var inst = instance(PlainBean.class, PlainBeanB.class);
             assertTrue(inst.isAmbiguous());
             assertFalse(inst.isResolvable());
             assertThrows(AmbiguousResolutionException.class, () -> inst.get(TestService.class));
@@ -275,8 +251,8 @@ class RecursiveInstanceTest {
         @Test
         void plainBeanAndDisabledAlternativeAreAmbiguous() {
             var inst = instance(
-                    classInfo(PlainBean.class),
-                    classInfo(DisabledAlternativeBean.class));
+                    PlainBean.class,
+                    DisabledAlternativeBean.class);
             assertTrue(inst.isAmbiguous());
         }
     }
@@ -287,8 +263,8 @@ class RecursiveInstanceTest {
         @Test
         void selectByCustomQualifierValue() {
             var inst = instance(
-                    classInfo(FastServiceBean.class),
-                    classInfo(SlowServiceBean.class));
+                    FastServiceBean.class,
+                    SlowServiceBean.class);
             LimitedInstance selected = inst.select(ServiceType.Literal.of("fast"));
             assertTrue(selected.isResolvable());
             assertTrue(selected.get(TestService.class) instanceof FastServiceBean);
@@ -297,8 +273,8 @@ class RecursiveInstanceTest {
         @Test
         void selectByCustomQualifierDifferentValue() {
             var inst = instance(
-                    classInfo(FastServiceBean.class),
-                    classInfo(SlowServiceBean.class));
+                    FastServiceBean.class,
+                    SlowServiceBean.class);
             LimitedInstance selected = inst.select(ServiceType.Literal.of("slow"));
             assertTrue(selected.isResolvable());
             assertTrue(selected.get(TestService.class) instanceof SlowServiceBean);
@@ -307,8 +283,8 @@ class RecursiveInstanceTest {
         @Test
         void selectByCustomQualifierNoMatch() {
             var inst = instance(
-                    classInfo(FastServiceBean.class),
-                    classInfo(SlowServiceBean.class));
+                    FastServiceBean.class,
+                    SlowServiceBean.class);
             LimitedInstance selected = inst.select(ServiceType.Literal.of("unknown"));
             assertTrue(selected.isUnsatisfied());
         }
@@ -316,8 +292,8 @@ class RecursiveInstanceTest {
         @Test
         void nonbindingMemberIsIgnoredDuringMatch() {
             var inst = instance(
-                    classInfo(TrackedFastBean.class),
-                    classInfo(TrackedSlowBean.class));
+                    TrackedFastBean.class,
+                    TrackedSlowBean.class);
             // TrackedFastBean has description="a fast tracked bean" but @Nonbinding should ignore it
             LimitedInstance selected = inst.select(Tracked.Literal.of("fast", "different description"));
             assertTrue(selected.isResolvable());
@@ -327,8 +303,8 @@ class RecursiveInstanceTest {
         @Test
         void bindingMemberStillMatchedWithNonbindingPresent() {
             var inst = instance(
-                    classInfo(TrackedFastBean.class),
-                    classInfo(TrackedSlowBean.class));
+                    TrackedFastBean.class,
+                    TrackedSlowBean.class);
             LimitedInstance selected = inst.select(Tracked.Literal.of("slow"));
             assertTrue(selected.isResolvable());
             assertTrue(selected.get(TestService.class) instanceof TrackedSlowBean);
@@ -337,8 +313,8 @@ class RecursiveInstanceTest {
         @Test
         void nonMatchingBindingMemberIsUnsatisfied() {
             var inst = instance(
-                    classInfo(TrackedFastBean.class),
-                    classInfo(TrackedSlowBean.class));
+                    TrackedFastBean.class,
+                    TrackedSlowBean.class);
             LimitedInstance selected = inst.select(Tracked.Literal.of("unknown"));
             assertTrue(selected.isUnsatisfied());
         }
@@ -350,8 +326,8 @@ class RecursiveInstanceTest {
         @Test
         void selectNarrowsCandidates() {
             var inst = instance(
-                    classInfo(DefaultBean.class),
-                    classInfo(PlainBean.class));
+                    DefaultBean.class,
+                    PlainBean.class);
             LimitedInstance selected = inst.select(Default.Literal.INSTANCE);
             assertTrue(selected.isResolvable());
             assertFalse(selected.isAmbiguous());
@@ -360,14 +336,14 @@ class RecursiveInstanceTest {
 
         @Test
         void selectWithNoMatchingQualifierIsUnsatisfied() {
-            var inst = instance(classInfo(PlainBean.class));
+            var inst = instance(PlainBean.class);
             LimitedInstance selected = inst.select(Default.Literal.INSTANCE);
             assertTrue(selected.isUnsatisfied());
         }
 
         @Test
         void selectWithNoQualifiersReturnsSameResolution() {
-            var inst = instance(classInfo(DefaultBean.class));
+            var inst = instance(DefaultBean.class);
             LimitedInstance selected = inst.select();
             assertTrue(selected.isResolvable());
             assertTrue(selected.get(TestService.class) instanceof DefaultBean);

@@ -13,6 +13,7 @@ import java.util.stream.StreamSupport;
 import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
+import org.jboss.jandex.IndexView;
 
 import io.github.fungrim.blackan.injector.creator.ProviderFactory;
 import jakarta.enterprise.inject.AmbiguousResolutionException;
@@ -28,17 +29,18 @@ public class RecursiveInstance implements LimitedInstance {
     private static final DotName PRIORITY = DotName.createSimple("jakarta.annotation.Priority");
 
     private final RecursionKey key;
-    private final Collection<ClassInfo> candidates;
     private final Optional<ClassInfo> defaultCandidate;
     private final boolean ambiguous;
     private final ProviderFactory providerFactory;
     private final InstanceFactory instanceFactory;
+    private final IndexView index;
 
-    public RecursiveInstance(RecursionKey key, Collection<ClassInfo> candidates, ProviderFactory providerFactory, InstanceFactory instanceFactory) {
+    public RecursiveInstance(RecursionKey key, ProviderFactory providerFactory, InstanceFactory instanceFactory, IndexView index) {
         this.key = key;
-        this.candidates = candidates;
         this.providerFactory = providerFactory;
         this.instanceFactory = instanceFactory;
+        this.index = index;
+        List<ClassInfo> candidates = computeCandidates();
         if (candidates.isEmpty()) {
             this.defaultCandidate = Optional.empty();
             this.ambiguous = false;
@@ -94,9 +96,27 @@ public class RecursiveInstance implements LimitedInstance {
         return Optional.empty();
     }
 
+    private List<ClassInfo> computeCandidates() {
+        ClassInfo typeInfo = index.getClassByName(key.type());
+        Collection<ClassInfo> allAssignables;
+        if (typeInfo == null || typeInfo.isInterface()) {
+            allAssignables = index.getAllKnownImplementations(key.type());
+        } else {
+            List<ClassInfo> list = new ArrayList<>(index.getAllKnownSubclasses(key.type()));
+            list.add(0, typeInfo);
+            allAssignables = list;
+        }
+        if (key.qualifiers().isEmpty()) {
+            return List.copyOf(allAssignables);
+        }
+        return allAssignables.stream()
+                .filter(c -> matchesAllQualifiers(c, key.qualifiers()))
+                .toList();
+    }
+
     @Override
     public List<ClassInfo> candidates() {
-        return candidates.stream()
+        return computeCandidates().stream()
                 .sorted((a, b) -> Integer.compare(priorityOf(a), priorityOf(b)))
                 .toList();
     }
@@ -145,7 +165,7 @@ public class RecursiveInstance implements LimitedInstance {
             @Override
             public Iterator<T> iterator() {
                 return StreamSupport.stream(
-                        candidates().spliterator(),
+                        RecursiveInstance.this.candidates().spliterator(),
                         false).map(c -> providerFactory.create(c, type).get()).iterator();
             }
 
@@ -161,12 +181,13 @@ public class RecursiveInstance implements LimitedInstance {
 
             @Override
             public <U extends T> Instance<U> select(Class<U> subtype, Annotation... qualifiers) {
-                throw new UnsupportedOperationException("Unimplemented method 'select'");
+                return RecursiveInstance.this.selectSubtype(subtype, qualifiers).toInstance(subtype);
             }
 
             @Override
             public <U extends T> Instance<U> select(TypeLiteral<U> subtype, Annotation... qualifiers) {
-                throw new UnsupportedOperationException("Unimplemented method 'select'");
+                Class<U> rawType = subtype.getRawType();
+                return RecursiveInstance.this.selectSubtype(rawType, qualifiers).toInstance(rawType);
             }
 
             @Override
@@ -197,15 +218,19 @@ public class RecursiveInstance implements LimitedInstance {
         };
     }
     
+    public <U> LimitedInstance selectSubtype(Class<U> subtype, Annotation... qualifiers) {
+        List<Annotation> combined = new ArrayList<>(key.qualifiers());
+        combined.addAll(qualifiers == null ? List.of() : List.of(qualifiers));
+        RecursionKey narrowedKey = RecursionKey.of(subtype, combined.toArray(new Annotation[0]));
+        return instanceFactory.create(narrowedKey);
+    }
+
     @Override
     public LimitedInstance select(Annotation... qualifiers) {
         List<Annotation> combined = new ArrayList<>(key.qualifiers());
         combined.addAll(qualifiers == null ? List.of() : List.of(qualifiers));
-        List<ClassInfo> filtered = candidates.stream()
-                .filter(candidate -> matchesAllQualifiers(candidate, combined))
-                .toList();
-        RecursionKey narrowedKey = RecursionKey.of(key.type(), combined.toArray(new Annotation[combined.size()]));
-        return instanceFactory.create(narrowedKey, filtered);
+        RecursionKey narrowedKey = RecursionKey.of(key.type(), combined.toArray(new Annotation[0]));
+        return instanceFactory.create(narrowedKey);
     }
     
     private boolean matchesAllQualifiers(ClassInfo candidate, List<Annotation> qualifiers) {
@@ -251,7 +276,7 @@ public class RecursiveInstance implements LimitedInstance {
 
     @Override
     public boolean isUnsatisfied() {
-        return candidates.isEmpty();
+        return defaultCandidate.isEmpty() && !ambiguous;
     }
 
     @Override

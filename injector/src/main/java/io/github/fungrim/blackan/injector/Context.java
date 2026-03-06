@@ -3,8 +3,6 @@ package io.github.fungrim.blackan.injector;
 import java.io.Closeable;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -86,7 +84,7 @@ public class Context implements Closeable {
         this.executorService = executorService;
         this.lifecycleEventPayload = lifecycleEventPayload != null ? lifecycleEventPayload : new DefaultLifecycleEvent();
         this.creatorFactory = new ScopeProviderFactory(this);
-        this.instanceFactory = new CachingInstanceFactory(creatorFactory);
+        this.instanceFactory = new CachingInstanceFactory(creatorFactory, index);
         if(eventOrdering == null) {
             this.eventOrdering = (a, b) -> 0;
         } else {
@@ -362,24 +360,13 @@ public class Context implements Closeable {
     public LimitedInstance getInstance(DotName type) {
         checkClosed();
         Arguments.notNull(type, "Type");
-        RecursionKey key = RecursionKey.of(type);
-        ClassAccess access = findClass(type).orElse(ClassAccess.of(loadClassOutsideOfIndex(type)));
-        if(access.isInterface()) {
-            return instanceFactory.create(key, index.getAllKnownImplementations(key.type()));
-        } else {
-            return instanceFactory.create(key, includeSelf(key.type()));
-        }
+        return instanceFactory.create(RecursionKey.of(type));
     }
 
     public LimitedInstance getInstance(ClassInfo type) {
         checkClosed();
         Arguments.notNull(type, "Type");
-        RecursionKey key = RecursionKey.of(type);
-        if(type.isInterface()) {
-            return instanceFactory.create(key, index.getAllKnownImplementations(key.type()));
-        } else {
-            return instanceFactory.create(key, includeSelf(key.type()));
-        }
+        return instanceFactory.create(RecursionKey.of(type));
     }
 
     public LimitedInstance getInstance(Class<?> type) {
@@ -488,22 +475,4 @@ public class Context implements Closeable {
         }
     }
 
-    // --- Private helpers ---
-
-    private Collection<ClassInfo> includeSelf(DotName type) {
-        List<ClassInfo> candidates = new ArrayList<>(index.getAllKnownSubclasses(type));
-        ClassInfo self = index.getClassByName(type);
-        if(self != null) {
-            candidates.add(0, self);
-        }
-        return candidates;
-    }
-
-    private Class<?> loadClassOutsideOfIndex(DotName type) {
-        try {
-            return classLoader().loadClass(type.toString());
-        } catch (ClassNotFoundException e) {
-            throw new ConstructionException("Failed to load class: " + type.toString(), e);
-        }
-    }
 }
