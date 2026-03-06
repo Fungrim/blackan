@@ -10,8 +10,10 @@ repositories {
 
 dependencies {
     implementation project(':common')
-    implementation libs.slf4j.api
+    implementation project(':cdi-common')
+    implementation libs.smallrye.config
     // test classes
+    testImplementation project(':injector')
     testImplementation libs.junit.jupiter
     testImplementation libs.mockito
     testImplementation libs.jandex

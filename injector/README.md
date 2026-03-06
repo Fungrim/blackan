@@ -134,9 +134,9 @@ The same pattern applies whenever a wider scope needs access to a narrower scope
 
 The container fires a sequence of events during startup and shutdown. These allow you to observe and influence the bean discovery process.
 
-### Pre-scan callbacks via `ContainerListener`
+### Full-lifecycle callbacks via `ContainerListener`
 
-The `BeforeBeanDiscovery`, `ProcessAnnotatedType`, and `AfterTypeDiscovery` events fire before any observer methods are registered, so they cannot be received via `@Observes`. Register a `ContainerListener` on the builder instead:
+`ContainerListener` covers the complete container lifecycle — from initial type scanning through shutdown. Register one or more listeners on the builder via `withListener()` (called multiple times to add multiple listeners):
 
 ```java
 Context context = Context.builder()
@@ -160,21 +160,92 @@ Context context = Context.builder()
             public void afterTypeDiscovery(AfterTypeDiscovery event) {
                 // fires after all ProcessAnnotatedType callbacks
             }
+
+            @Override
+            public void processObserverMethod(ProcessObserverMethod event) {
+                // fires before the same event reaches @Observes methods
+                if (shouldVetoObserver(event.observerMethod())) {
+                    event.veto();
+                }
+            }
+
+            @Override
+            public void afterBeanDiscovery(AfterBeanDiscovery event) {
+                // fires before the same event reaches @Observes methods
+                // use addBean() to register programmatic beans
+                event.addBean(MyService.class, ApplicationScoped.class, MyServiceImpl::new);
+            }
+
+            @Override
+            public void afterDeploymentValidation(AfterDeploymentValidation event) {
+                // report validation errors; a non-empty problem list aborts startup
+                if (!configIsValid()) {
+                    event.addDeploymentProblem(new IllegalStateException("Config missing"));
+                }
+            }
+
+            @Override
+            public void beforeShutdown(BeforeShutdown event) {
+                // fires before the same event reaches @Observes methods
+            }
         })
         .build();
 ```
 
+For the pre-scan callbacks (`beforeBeanDiscovery`, `processAnnotatedType`, `afterTypeDiscovery`) observer scanning has not yet occurred, so they cannot be received via `@Observes`.
+
+For post-scan callbacks (`processObserverMethod`, `afterBeanDiscovery`, `afterDeploymentValidation`, `beforeShutdown`) the `ContainerListener` is called **before** the same event is fired to `@Observes` methods in managed beans, so listeners always see the event first.
+
 Vetoed types are invisible to the container: `getInstance()` returns an unsatisfied result and injected `Provider<T>` / `Instance<T>` will not resolve them.
+
+### Synthetic beans via `AfterBeanDiscovery.addBean()`
+
+Any `ContainerListener` can register programmatic beans during `afterBeanDiscovery`. Synthetic beans are backed by a `Supplier` and participate in the container as if they were `@Produces` methods:
+
+```java
+@Override
+public void afterBeanDiscovery(AfterBeanDiscovery event) {
+    // register a singleton backed by a supplier
+    event.addBean(DataSource.class, ApplicationScoped.class, this::buildDataSource);
+
+    // with qualifiers
+    event.addBean(DataSource.class, ApplicationScoped.class, this::buildReadReplica,
+            new NamedLiteral("readReplica"));
+}
+```
+
+Synthetic beans without a scope annotation are treated as `@Dependent`. Scopes other than `@Dependent` are cached as singletons (no client proxies).
+
+### Jandex-discoverable extensions via `ContainerExtension`
+
+For reusable extensions that should be discovered automatically, implement `ContainerExtension` instead of `ContainerListener`. Any non-abstract class in the Jandex index that directly implements `ContainerExtension` is discovered and instantiated via its public no-arg constructor before any lifecycle callbacks fire:
+
+```java
+public class MyExtension implements ContainerExtension {
+
+    @Override
+    public void beforeBeanDiscovery(BeforeBeanDiscovery event) { ... }
+
+    @Override
+    public void afterBeanDiscovery(AfterBeanDiscovery event) {
+        event.addBean(MyService.class, ApplicationScoped.class, MyServiceImpl::new);
+    }
+}
+```
+
+The extension class must be included in the Jandex index passed to the builder. If the same class is also registered programmatically via `withListener()`, only the programmatic instance is used.
+
+`ContainerExtension` implementations are instantiated before the DI container is ready and do not support dependency injection during lifecycle callbacks.
 
 ### Post-scan events via `@Observes`
 
-The following events fire after observer and producer scanning completes. They are delivered to `@Observes` methods in the normal way:
+The lifecycle events that fire after scanning also reach `@Observes` methods on managed beans. `ContainerListener` and `ContainerExtension` callbacks always fire before these:
 
 | Event | When | Notes |
 |---|---|---|
 | `ProcessObserverMethod` | Once per discovered observer method | Call `event.veto()` to remove the observer from the registry |
-| `AfterBeanDiscovery` | After all observers and producers are scanned | |
-| `AfterDeploymentValidation` | Immediately after `AfterBeanDiscovery` | Last event before the container becomes operational |
+| `AfterBeanDiscovery` | After all observers and producers are scanned | Call `event.addBean()` to add synthetic beans |
+| `AfterDeploymentValidation` | Immediately after `AfterBeanDiscovery` | Call `event.addDeploymentProblem()` to abort startup |
 | `BeforeShutdown` | At the start of `Context.close()` | Fires only for the root context, before `@BeforeDestroyed` |
 
 ```java
@@ -199,9 +270,11 @@ public class LifecycleObserver {
 
 ### Deviations from CDI 2.0
 
-- **`BeforeBeanDiscovery`, `ProcessAnnotatedType`, `AfterTypeDiscovery`** are delivered via `ContainerListener`, not `@Observes`, because observer scanning has not yet occurred at that point. The CDI spec fires them to portable extensions instead.
+- **`BeforeBeanDiscovery`, `ProcessAnnotatedType`, `AfterTypeDiscovery`** are delivered via `ContainerListener`/`ContainerExtension`, not `@Observes`, because observer scanning has not yet occurred at that point.
 - **`ProcessAnnotatedType`** receives a Jandex `ClassInfo` rather than a CDI `AnnotatedType<X>`, as the container has no full reflection metadata at that stage.
 - **`ProcessObserverMethod`** receives the internal `ObserverMethod` record rather than `jakarta.enterprise.inject.spi.ObserverMethod<T>`, because the container does not implement the full `BeanManager` SPI.
+- **`AfterBeanDiscovery.addBean()`** accepts a `Supplier<T>` and a scope annotation class rather than a full `BeanConfigurator`. Beans registered this way act as direct references (no scope proxies).
+- **`ContainerExtension`** is discovered via Jandex index rather than `ServiceLoader`, and requires a public no-arg constructor.
 - **`ProcessBean`, `ProcessBeanAttributes`, `ProcessInjectionPoint`, `ProcessInjectionTarget`, `ProcessProducer`** are not supported.
 - **`BeforeShutdown`** fires only when the root (`ApplicationScoped`) context is closed. Closing a subcontext does not trigger it.
 - Lifecycle events for subcontexts (`AfterBeanDiscovery`, `AfterDeploymentValidation`, etc.) do not fire again when a subcontext is created — they are root-context-only events.
@@ -217,7 +290,7 @@ Unsupported features include:
 - **Stereotypes**
 - **Bean discovery modes** (`annotated`, `all`, `none`)
 - **`@Disposes`** methods for producer cleanup
-- **Portable extensions** (`Extension` SPI)
+- **Full portable extensions** (`jakarta.enterprise.inject.spi.Extension` SPI) — limited support is available via `ContainerExtension` and `ContainerListener` (see above)
 - **Build-compatible extensions** (Build Compatible Extensions SPI)
 - **`ProcessBean`, `ProcessBeanAttributes`, `ProcessInjectionPoint`, `ProcessProducer`** lifecycle SPI events
 - **Conversation scope** (`@ConversationScoped`)

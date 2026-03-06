@@ -10,6 +10,7 @@ repositories {
 dependencies {
     implementation project(':common')
     implementation project(':injector')
+    implementation project(':cdi-common')
     implementation project(':isolates:bootstrap')
     // test classes
     testImplementation libs.junit.jupiter

@@ -3,6 +3,8 @@ package io.github.fungrim.blackan.injector;
 import java.io.Closeable;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -28,6 +30,7 @@ import io.github.fungrim.blackan.common.cdi.AfterDeploymentValidation;
 import io.github.fungrim.blackan.common.cdi.AfterTypeDiscovery;
 import io.github.fungrim.blackan.common.cdi.BeforeBeanDiscovery;
 import io.github.fungrim.blackan.common.cdi.BeforeShutdown;
+import io.github.fungrim.blackan.common.cdi.ContainerExtension;
 import io.github.fungrim.blackan.common.cdi.ContainerListener;
 import io.github.fungrim.blackan.common.cdi.DefaultLifecycleEvent;
 import io.github.fungrim.blackan.common.cdi.ObserverMethod;
@@ -76,7 +79,7 @@ public class Context implements Closeable {
     private final Object lifecycleEventPayload;
     private final DestroyableTracker destroyableTracker = new DestroyableTracker();
     private final ScopeRegistry scopeRegistry;
-    private final ContainerListener containerListener;
+    private final List<ContainerListener> containerListeners;
     private final Set<DotName> vetoedTypes;
 
     private Context(
@@ -89,7 +92,7 @@ public class Context implements Closeable {
             ExecutorService executorService,
             Object lifecycleEventPayload,
             ScopeRegistry scopeRegistry,
-            ContainerListener containerListener
+            List<ContainerListener> containerListeners
         ) {
         this.index = index;
         this.parent = parent;
@@ -98,7 +101,7 @@ public class Context implements Closeable {
         this.producerRegistry = producerRegistry;
         this.executorService = executorService;
         this.lifecycleEventPayload = lifecycleEventPayload != null ? lifecycleEventPayload : new DefaultLifecycleEvent();
-        this.containerListener = containerListener != null ? containerListener : new ContainerListener() {};
+        this.containerListeners = containerListeners != null ? List.copyOf(containerListeners) : List.of();
         if(eventOrdering == null) {
             this.eventOrdering = (a, b) -> 0;
         } else {
@@ -144,7 +147,7 @@ public class Context implements Closeable {
         private Comparator<ClassInfo> eventOrdering;
         private ExecutorService executorService;
         private Object lifecycleEventPayload;
-        private ContainerListener listener;
+        private final List<ContainerListener> listeners = new ArrayList<>();
 
         public Builder withCustomEventOrdering(Comparator<ClassInfo> eventOrdering) {
             this.eventOrdering = eventOrdering;
@@ -182,7 +185,7 @@ public class Context implements Closeable {
         }
 
         public Builder withListener(ContainerListener listener) {
-            this.listener = listener;
+            this.listeners.add(listener);
             return this;
         }
      
@@ -216,6 +219,27 @@ public class Context implements Closeable {
                     return t;
                 });
             }
+            DotName extName = DotName.createSimple(ContainerExtension.class);
+            Set<String> addedExtensions = new HashSet<>();
+            for (ContainerListener l : listeners) {
+                addedExtensions.add(l.getClass().getName());
+            }
+            for (ClassInfo ci : index.getAllKnownImplementations(extName)) {
+                if (ci.isInterface() || Modifier.isAbstract(ci.flags())) {
+                    continue;
+                }
+                if (addedExtensions.contains(ci.name().toString())) {
+                    continue;
+                }
+                try {
+                    Class<?> cl = classLoader.loadClass(ci.name().toString());
+                    ContainerExtension ext = (ContainerExtension) cl.getDeclaredConstructor().newInstance();
+                    listeners.add(ext);
+                    addedExtensions.add(ci.name().toString());
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException("Failed to instantiate ContainerExtension: " + ci.name(), e);
+                }
+            }
             return new Context(
                 index,
                 null,
@@ -226,7 +250,7 @@ public class Context implements Closeable {
                 executorService,
                 lifecycleEventPayload,
                 new ScopeRegistry(scopeProvider),
-                listener
+                listeners
             );
         }
     }
@@ -248,28 +272,56 @@ public class Context implements Closeable {
 
     private void initialize(Set<DotName> mutableVetoedTypes) {
         if (parent == null) {
-            containerListener.beforeBeanDiscovery(new BeforeBeanDiscovery());
+            BeforeBeanDiscovery bbd = new BeforeBeanDiscovery();
+            for (ContainerListener listener : containerListeners) {
+                listener.beforeBeanDiscovery(bbd);
+            }
             for (ClassInfo classInfo : index.getKnownClasses()) {
                 ProcessAnnotatedType event = new ProcessAnnotatedType(classInfo);
-                containerListener.processAnnotatedType(event);
+                for (ContainerListener listener : containerListeners) {
+                    listener.processAnnotatedType(event);
+                }
                 if (event.isVetoed()) {
                     mutableVetoedTypes.add(classInfo.name());
                 }
             }
-            containerListener.afterTypeDiscovery(new AfterTypeDiscovery());
+            AfterTypeDiscovery atd = new AfterTypeDiscovery();
+            for (ContainerListener listener : containerListeners) {
+                listener.afterTypeDiscovery(atd);
+            }
         }
         scanProducers();
         observerRegistry.scan(index);
         if (parent == null) {
             for (ObserverMethod om : observerRegistry.allObservers()) {
                 ProcessObserverMethod event = new ProcessObserverMethod(om);
+                for (ContainerListener listener : containerListeners) {
+                    listener.processObserverMethod(event);
+                }
                 fireInternal(event);
                 if (event.isVetoed()) {
                     observerRegistry.remove(om);
                 }
             }
-            fireInternal(new AfterBeanDiscovery());
-            fireInternal(new AfterDeploymentValidation());
+            AfterBeanDiscovery abd = new AfterBeanDiscovery();
+            for (ContainerListener listener : containerListeners) {
+                listener.afterBeanDiscovery(abd);
+            }
+            fireInternal(abd);
+            for (AfterBeanDiscovery.SyntheticBean<?> bean : abd.beans()) {
+                producerRegistry.registerSynthetic(bean);
+            }
+            AfterDeploymentValidation adv = new AfterDeploymentValidation();
+            for (ContainerListener listener : containerListeners) {
+                listener.afterDeploymentValidation(adv);
+            }
+            fireInternal(adv);
+            if (!adv.getProblems().isEmpty()) {
+                IllegalStateException ex = new IllegalStateException(
+                        "Deployment validation failed with " + adv.getProblems().size() + " problem(s)");
+                adv.getProblems().forEach(ex::addSuppressed);
+                throw ex;
+            }
         }
         fireLifecycleEvent(Initialized.Literal.of(scope.annotationClass()));
     }
@@ -299,7 +351,11 @@ public class Context implements Closeable {
             return;
         }
         if (parent == null) {
-            fireInternal(new BeforeShutdown());
+            BeforeShutdown bs = new BeforeShutdown();
+            for (ContainerListener listener : containerListeners) {
+                listener.beforeShutdown(bs);
+            }
+            fireInternal(bs);
         }
         destroyableTracker.destroyAll();
         fireLifecycleEvent(BeforeDestroyed.Literal.of(scope.annotationClass()));
@@ -512,7 +568,7 @@ public class Context implements Closeable {
             executorService(),
             lifecycleEventPayload.orElse(null),
             scopeRegistry,
-            null);
+            List.of());
     }
 
     // --- Navigation ---

@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.jboss.jandex.AnnotationInstance;
+import org.jboss.jandex.AnnotationTarget;
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
 
@@ -33,6 +34,7 @@ public enum Scope {
     public static Optional<Scope> of(ClassInfo clazz) {
         List<Scope> scopes = clazz.annotations()
             .stream()
+            .filter(a -> a.target() != null && a.target().kind() == AnnotationTarget.Kind.CLASS)
             .map(Scope::from)
             .filter(Optional::isPresent)
             .map(Optional::get)

@@ -24,6 +24,7 @@ dependencies {
     boot project(':isolates:bootstrap')
     blackanRuntime project(':isolates:runtime')
     blackanRuntime project(':extensions:bootstrap:slf4j')
+    blackanRuntime project(':extensions:bootstrap:smallrye-config')
     implementation libs.jandex
     // test classes
     testImplementation libs.junit.jupiter

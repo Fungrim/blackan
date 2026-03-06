@@ -1,11 +1,15 @@
 package io.github.fungrim.blackan.injector.producer;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+
+import jakarta.enterprise.util.Nonbinding;
 
 public record ProducerCacheKey(
     Class<?> rawType,
@@ -33,7 +37,24 @@ public record ProducerCacheKey(
     }
 
     private static String qualifierIdentity(Annotation annotation) {
-        return annotation.toString();
+        Method[] methods = annotation.annotationType().getDeclaredMethods();
+        Arrays.sort(methods, Comparator.comparing(Method::getName));
+        StringBuilder sb = new StringBuilder("@").append(annotation.annotationType().getName()).append("(");
+        boolean first = true;
+        for (Method m : methods) {
+            if (m.isAnnotationPresent(Nonbinding.class)) {
+                continue;
+            }
+            if (!first) sb.append(", ");
+            try {
+                sb.append(m.getName()).append("=").append(m.invoke(annotation));
+            } catch (ReflectiveOperationException e) {
+                throw new IllegalStateException("Failed to read qualifier attribute: " + m.getName(), e);
+            }
+            first = false;
+        }
+        sb.append(")");
+        return sb.toString();
     }
 
     @Override

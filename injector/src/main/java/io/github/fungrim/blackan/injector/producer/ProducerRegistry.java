@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.jboss.jandex.MethodInfo;
 
+import io.github.fungrim.blackan.common.cdi.AfterBeanDiscovery;
 import io.github.fungrim.blackan.common.cdi.TargetAwareProvider;
 import io.github.fungrim.blackan.injector.Context;
 import io.github.fungrim.blackan.injector.Scope;
@@ -41,6 +42,17 @@ public class ProducerRegistry {
     @SuppressWarnings("unchecked")
     public <T> Optional<Provider<T>> find(ProducerCacheKey key) {
         return Optional.ofNullable((Provider<T>) producers.get(key));
+    }
+
+    @SuppressWarnings("unchecked")
+    public void registerSynthetic(AfterBeanDiscovery.SyntheticBean<?> bean) {
+        Provider<?> provider = () -> bean.factory().get();
+        Scope scope = Scope.from(bean.scope()).orElse(Scope.DEPENDENT);
+        if (scope != Scope.DEPENDENT) {
+            provider = new SingletonProvider<>((Provider<Object>) provider);
+        }
+        ProducerCacheKey key = ProducerCacheKey.of(bean.type(), bean.qualifiers());
+        producers.put(key, provider);
     }
 
     public boolean isEmpty() {
