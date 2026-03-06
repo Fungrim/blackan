@@ -6,7 +6,7 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executor;
 
 import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.DotName;
@@ -28,7 +28,7 @@ public class EventCoordinator {
         }
     }
 
-    public static CompletionStage<Object> fireObserversAsync(Context context, ExecutorService executor, List<ObserverMethod> observers, Object event) {
+    public static CompletionStage<Object> fireObserversAsync(Context context, Executor executor, List<ObserverMethod> observers, Object event) {
         return java.util.concurrent.CompletableFuture.supplyAsync(() -> {
             for (ObserverMethod observer : observers) {
                 invokeObserver(context, observer, event);

@@ -43,6 +43,7 @@ import io.github.fungrim.blackan.injector.producer.ProducerRegistry;
 import jakarta.enterprise.context.BeforeDestroyed;
 import jakarta.enterprise.context.Destroyed;
 import jakarta.enterprise.context.Initialized;
+import jakarta.enterprise.event.NotificationOptions;
 import jakarta.enterprise.inject.Produces;
 
 public class Context implements Closeable {
@@ -335,6 +336,15 @@ public class Context implements Closeable {
         checkClosed();
         List<org.jboss.jandex.AnnotationInstance> jandexQualifiers = EventCoordinator.toJandexQualifiers(qualifiers);
         return EventCoordinator.fireObserversAsync(this, executorService, observerRegistry.matchAsync(event, jandexQualifiers), event);
+    }
+
+    public CompletionStage<Object> fireAsync(Object event, NotificationOptions options, Annotation... qualifiers) {
+        checkClosed();
+        java.util.concurrent.Executor executor = (options != null && options.getExecutor() != null)
+                ? options.getExecutor()
+                : executorService;
+        List<org.jboss.jandex.AnnotationInstance> jandexQualifiers = EventCoordinator.toJandexQualifiers(qualifiers);
+        return EventCoordinator.fireObserversAsync(this, executor, observerRegistry.matchAsync(event, jandexQualifiers), event);
     }
 
     // --- Lookup ---

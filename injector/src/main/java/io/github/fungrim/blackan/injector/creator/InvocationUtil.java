@@ -3,6 +3,7 @@ package io.github.fungrim.blackan.injector.creator;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.List;
 import java.util.Optional;
 
 import org.jboss.jandex.DotName;
@@ -10,11 +11,14 @@ import org.jboss.jandex.DotName;
 import io.github.fungrim.blackan.common.cdi.InjectionTarget;
 import io.github.fungrim.blackan.common.cdi.TargetAwareProvider;
 import io.github.fungrim.blackan.injector.Context;
+import io.github.fungrim.blackan.injector.event.EventInjectionPoint;
 import io.github.fungrim.blackan.injector.lookup.RecursionKey;
 import io.github.fungrim.blackan.injector.producer.ProducerCacheKey;
 import io.github.fungrim.blackan.injector.producer.ProducerRegistry;
+import jakarta.enterprise.event.Event;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Provider;
+import jakarta.inject.Qualifier;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -51,6 +55,10 @@ public class InvocationUtil {
             DotName typeName = DotName.createSimple(typeArg);
             return new SubScopeProvider<>(context.scopeRegistry(), typeName, typeArg);
         }
+        if (Event.class.isAssignableFrom(rawType)) {
+            Annotation[] eventQualifiers = filterQualifiers(key.qualifiers());
+            return new EventInjectionPoint<>(context.scopeRegistry(), eventQualifiers);
+        }
         if (Context.class.isAssignableFrom(rawType)) {
             if(DependentProviderStack.isInExtension()) {
                 return context;
@@ -71,6 +79,12 @@ public class InvocationUtil {
                 context.getInstance(key.type()).get(context.loadClass(key.type())),
                 target
         );
+    }
+
+    private static Annotation[] filterQualifiers(List<Annotation> annotations) {
+        return annotations.stream()
+                .filter(a -> a.annotationType().isAnnotationPresent(Qualifier.class))
+                .toArray(Annotation[]::new);
     }
 
     private static Class<?> rawClass(Type type) {
