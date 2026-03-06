@@ -4,11 +4,9 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.StreamSupport;
 
 import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.ClassInfo;
@@ -19,7 +17,6 @@ import io.github.fungrim.blackan.injector.creator.ProviderFactory;
 import jakarta.enterprise.inject.AmbiguousResolutionException;
 import jakarta.enterprise.inject.Instance;
 import jakarta.enterprise.inject.UnsatisfiedResolutionException;
-import jakarta.enterprise.util.TypeLiteral;
 import jakarta.inject.Provider;
 
 public class RecursiveInstance implements LimitedInstance {
@@ -160,62 +157,7 @@ public class RecursiveInstance implements LimitedInstance {
     
     @Override
     public <T> Instance<T> toInstance(Class<T> type) {
-        return new Instance<T>() {
-
-            @Override
-            public Iterator<T> iterator() {
-                return StreamSupport.stream(
-                        RecursiveInstance.this.candidates().spliterator(),
-                        false).map(c -> providerFactory.create(c, type).get()).iterator();
-            }
-
-            @Override
-            public T get() {
-                return RecursiveInstance.this.get(type);
-            }
-
-            @Override
-            public Instance<T> select(Annotation... qualifiers) {
-                return RecursiveInstance.this.select(qualifiers).toInstance(type);
-            }
-
-            @Override
-            public <U extends T> Instance<U> select(Class<U> subtype, Annotation... qualifiers) {
-                return RecursiveInstance.this.selectSubtype(subtype, qualifiers).toInstance(subtype);
-            }
-
-            @Override
-            public <U extends T> Instance<U> select(TypeLiteral<U> subtype, Annotation... qualifiers) {
-                Class<U> rawType = subtype.getRawType();
-                return RecursiveInstance.this.selectSubtype(rawType, qualifiers).toInstance(rawType);
-            }
-
-            @Override
-            public boolean isUnsatisfied() {
-                return RecursiveInstance.this.isUnsatisfied();
-            }
-
-            @Override
-            public boolean isAmbiguous() {
-                return RecursiveInstance.this.isAmbiguous();
-            }
-
-            @Override
-            public void destroy(T instance) {
-                // no-op: use Context.destroy() for full lifecycle + cache clearing
-            }
-
-            @Override
-            public Handle<T> getHandle() {
-                throw new UnsupportedOperationException("Unimplemented method 'getHandle'");
-            }
-
-            @Override
-            public Iterable<? extends Handle<T>> handles() {
-                throw new UnsupportedOperationException("Unimplemented method 'handles'");
-            }
-            
-        };
+        return new LocalInstance<>(this, providerFactory, type);
     }
     
     public <U> LimitedInstance selectSubtype(Class<U> subtype, Annotation... qualifiers) {
