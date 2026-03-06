@@ -17,11 +17,11 @@ public class RuntimeController {
     }
 
     public void start() {
-        context.fireInOrder(new RuntimeStartEvent());
+        context.fireInCustomOrder(new RuntimeStartEvent());
     }
 
     public void stop() {
-        context.fireInReverseOrder(new RuntimeStopEvent());
+        context.fireInReverseCustomOrder(new RuntimeStopEvent());
     }   
 
     public void run() throws InterruptedException {

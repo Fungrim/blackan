@@ -20,7 +20,7 @@ public class RuntimeBootstrap {
             indexView.getKnownClasses().forEach(c -> System.out.println(" - " + c.name().toString()));
             Context context = Context.builder()
                 .withIndex(indexView)
-                .withEventOrdering(new StageAndPriorityComparator())
+                .withCustomEventOrdering(new StageAndPriorityComparator())
                 .build();
             new RuntimeController(context).run();
         } else {

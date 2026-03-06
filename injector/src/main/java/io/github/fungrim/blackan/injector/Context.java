@@ -128,7 +128,7 @@ public class Context implements Closeable {
         private ExecutorService executorService;
         private Object lifecycleEventPayload;
 
-        public Builder withEventOrdering(Comparator<ClassInfo> eventOrdering) {
+        public Builder withCustomEventOrdering(Comparator<ClassInfo> eventOrdering) {
             this.eventOrdering = eventOrdering;
             return this;
         }
@@ -238,7 +238,7 @@ public class Context implements Closeable {
 
     private void fireLifecycleEvent(Annotation qualifier) {
         List<AnnotationInstance> jandexQualifiers = EventCoordinator.toJandexQualifiers(new Annotation[]{qualifier});
-        EventCoordinator.fireObservers(this, observerRegistry.matchSync(lifecycleEventPayload, jandexQualifiers, eventOrdering), lifecycleEventPayload);
+        EventCoordinator.fireObservers(this, observerRegistry.matchSync(lifecycleEventPayload, jandexQualifiers), lifecycleEventPayload);
     }
 
     // --- Lifecycle ---
@@ -316,16 +316,16 @@ public class Context implements Closeable {
     public void fire(Object event, Annotation... qualifiers) {
         checkClosed();
         List<org.jboss.jandex.AnnotationInstance> jandexQualifiers = EventCoordinator.toJandexQualifiers(qualifiers);
-        EventCoordinator.fireObservers(this, observerRegistry.matchSync(event, jandexQualifiers, (a, b) -> 0), event);
+        EventCoordinator.fireObservers(this, observerRegistry.matchSync(event, jandexQualifiers), event);
     }
 
-    public void fireInOrder(Object event, Annotation... qualifiers) {
+    public void fireInCustomOrder(Object event, Annotation... qualifiers) {
         checkClosed();
         List<org.jboss.jandex.AnnotationInstance> jandexQualifiers = EventCoordinator.toJandexQualifiers(qualifiers);
         EventCoordinator.fireObservers(this, observerRegistry.matchSync(event, jandexQualifiers, eventOrdering), event);
     }
 
-    public void fireInReverseOrder(Object event, Annotation... qualifiers) {
+    public void fireInReverseCustomOrder(Object event, Annotation... qualifiers) {
         checkClosed();
         List<org.jboss.jandex.AnnotationInstance> jandexQualifiers = EventCoordinator.toJandexQualifiers(qualifiers);
         EventCoordinator.fireObservers(this, observerRegistry.matchSync(event, jandexQualifiers, eventOrdering.reversed()), event);
@@ -334,7 +334,7 @@ public class Context implements Closeable {
     public CompletionStage<Object> fireAsync(Object event, Annotation... qualifiers) {
         checkClosed();
         List<org.jboss.jandex.AnnotationInstance> jandexQualifiers = EventCoordinator.toJandexQualifiers(qualifiers);
-        return EventCoordinator.fireObserversAsync(this, executorService, observerRegistry.matchAsync(event, jandexQualifiers, eventOrdering), event);
+        return EventCoordinator.fireObserversAsync(this, executorService, observerRegistry.matchAsync(event, jandexQualifiers), event);
     }
 
     // --- Lookup ---

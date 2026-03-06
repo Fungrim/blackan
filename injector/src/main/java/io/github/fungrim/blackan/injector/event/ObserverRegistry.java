@@ -19,6 +19,13 @@ public class ObserverRegistry {
 
     private static final DotName OBSERVES = DotName.createSimple(Observes.class);
     private static final DotName OBSERVES_ASYNC = DotName.createSimple(ObservesAsync.class);
+    private static final DotName PRIORITY = DotName.createSimple("jakarta.annotation.Priority");
+
+    /** CDI spec 10.5.2: default priority is Interceptor.Priority.APPLICATION (2000) + 500 */
+    private static final int DEFAULT_PRIORITY = 2500;
+
+    private static final Comparator<ObserverMethod> CDI_OBSERVER_ORDERING =
+            Comparator.comparingInt(ObserverMethod::priority);
 
     private final List<ObserverMethod> observers = new ArrayList<>();
 
@@ -36,7 +43,8 @@ public class ObserverRegistry {
             MethodInfo method = paramInfo.method();
             DotName eventType = method.parameterType(paramInfo.position()).name();
             List<AnnotationInstance> qualifiers = collectQualifiers(method, paramInfo.position());
-            observers.add(new ObserverMethod(method, eventType, qualifiers, async));
+            int priority = extractPriority(method, paramInfo.position());
+            observers.add(new ObserverMethod(method, eventType, qualifiers, async, priority));
         }
     }
 
@@ -44,19 +52,37 @@ public class ObserverRegistry {
         return method.annotations().stream()
                 .filter(a -> a.target().kind() == AnnotationTarget.Kind.METHOD_PARAMETER)
                 .filter(a -> a.target().asMethodParameter().position() == paramPosition)
-                .filter(a -> !a.name().equals(OBSERVES) && !a.name().equals(OBSERVES_ASYNC))
+                .filter(a -> !a.name().equals(OBSERVES) && !a.name().equals(OBSERVES_ASYNC) && !a.name().equals(PRIORITY))
                 .toList();
     }
 
-    public List<ObserverMethod> matchSync(Object event, List<AnnotationInstance> qualifiers, Comparator<org.jboss.jandex.ClassInfo> ordering) {
-        return match(event, qualifiers, false, ordering);
+    private static int extractPriority(MethodInfo method, int paramPosition) {
+        return method.annotations().stream()
+                .filter(a -> a.target().kind() == AnnotationTarget.Kind.METHOD_PARAMETER)
+                .filter(a -> a.target().asMethodParameter().position() == paramPosition)
+                .filter(a -> a.name().equals(PRIORITY))
+                .findFirst()
+                .map(a -> a.value().asInt())
+                .orElse(DEFAULT_PRIORITY);
     }
 
-    public List<ObserverMethod> matchAsync(Object event, List<AnnotationInstance> qualifiers, Comparator<org.jboss.jandex.ClassInfo> ordering) {
-        return match(event, qualifiers, true, ordering);
+    public List<ObserverMethod> matchSync(Object event, List<AnnotationInstance> qualifiers) {
+        return match(event, qualifiers, false, CDI_OBSERVER_ORDERING);
     }
 
-    private List<ObserverMethod> match(Object event, List<AnnotationInstance> qualifiers, boolean async, Comparator<org.jboss.jandex.ClassInfo> ordering) {
+    public List<ObserverMethod> matchSync(Object event, List<AnnotationInstance> qualifiers, Comparator<org.jboss.jandex.ClassInfo> classOrdering) {
+        return match(event, qualifiers, false, Comparator.comparing(o -> o.method().declaringClass(), classOrdering));
+    }
+
+    public List<ObserverMethod> matchAsync(Object event, List<AnnotationInstance> qualifiers) {
+        return match(event, qualifiers, true, CDI_OBSERVER_ORDERING);
+    }
+
+    public List<ObserverMethod> matchAsync(Object event, List<AnnotationInstance> qualifiers, Comparator<org.jboss.jandex.ClassInfo> classOrdering) {
+        return match(event, qualifiers, true, Comparator.comparing(o -> o.method().declaringClass(), classOrdering));
+    }
+
+    private List<ObserverMethod> match(Object event, List<AnnotationInstance> qualifiers, boolean async, Comparator<ObserverMethod> ordering) {
         DotName eventTypeName = DotName.createSimple(event.getClass());
         List<ObserverMethod> matched = observers.stream()
                 .filter(o -> o.async() == async)
@@ -64,7 +90,7 @@ public class ObserverRegistry {
                 .filter(o -> matchesQualifiers(o.qualifiers(), qualifiers))
                 .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
         if (ordering != null) {
-            matched.sort(Comparator.comparing(o -> o.method().declaringClass(), ordering));
+            matched.sort(ordering);
         }
         return matched;
     }

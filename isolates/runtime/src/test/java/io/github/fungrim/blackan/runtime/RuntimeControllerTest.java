@@ -36,7 +36,7 @@ class RuntimeControllerTest {
                         BootstrapService.class,
                         CoreStageService.class,
                         ApplicationStageService.class))
-                .withEventOrdering(new StageAndPriorityComparator())
+                .withCustomEventOrdering(new StageAndPriorityComparator())
                 .build();
         controller = new RuntimeController(root);
     }

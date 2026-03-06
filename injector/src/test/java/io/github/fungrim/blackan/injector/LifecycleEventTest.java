@@ -6,13 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
-import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.jboss.jandex.AnnotationInstance;
-import org.jboss.jandex.ClassInfo;
-import org.jboss.jandex.DotName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -27,14 +23,7 @@ import io.github.fungrim.blackan.injector.util.stubs.SecondLifecycleBean;
 
 class LifecycleEventTest {
 
-    private static final DotName PRIORITY = DotName.createSimple("jakarta.annotation.Priority");
-
     private final AtomicReference<Context> currentContext = new AtomicReference<>();
-
-    private static int priorityOf(ClassInfo c) {
-        AnnotationInstance ann = c.annotation(PRIORITY);
-        return ann != null ? ann.value().asInt() : Integer.MAX_VALUE;
-    }
 
     @Nested
     class BasicLifecycleEvents {
@@ -101,12 +90,9 @@ class LifecycleEventTest {
         }
 
         @Test
-        void initializedEventsRespectEventOrdering() throws IOException {
-            Comparator<ClassInfo> ordering = Comparator.comparingInt(LifecycleEventTest::priorityOf);
-
+        void initializedEventsRespectCdiPriorityOnEventParameter() throws IOException {
             Context root = Context.builder()
                     .withClasses(List.of(LifecycleBean.class, SecondLifecycleBean.class))
-                    .withEventOrdering(ordering)
                     .withScopeProvider(() -> currentContext.get())
                     .build();
             currentContext.set(root);
@@ -117,7 +103,7 @@ class LifecycleEventTest {
             assertTrue(secondIdx >= 0, "SecondLifecycleBean.initialized should be present");
             assertTrue(firstIdx >= 0, "LifecycleBean.initialized should be present");
             assertTrue(secondIdx < firstIdx,
-                    "SecondLifecycleBean (@Priority(1)) should fire before LifecycleBean (no priority)");
+                    "SecondLifecycleBean (@Priority(1) on event param) should fire before LifecycleBean (default priority 2500)");
         }
     }
 

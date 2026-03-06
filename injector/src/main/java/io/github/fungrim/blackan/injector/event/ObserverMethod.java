@@ -10,5 +10,6 @@ public record ObserverMethod(
     MethodInfo method,
     DotName eventType,
     List<AnnotationInstance> qualifiers,
-    boolean async
+    boolean async,
+    int priority
 ) {}

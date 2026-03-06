@@ -3,4 +3,11 @@ plugins {
 }
 
 rootProject.name = 'blackan'
-include 'common', 'injector', 'isolates:bootstrap', 'isolates:runtime', 'plugins:gradle', 'extensions:bootstrap:slf4j'
+include(
+    'common', 
+    'injector', 
+    'isolates:bootstrap', 
+    'isolates:runtime', 
+    'plugins:gradle', 
+    'extensions:bootstrap:slf4j',
+    'extensions:bootstrap:smallrye-config')
