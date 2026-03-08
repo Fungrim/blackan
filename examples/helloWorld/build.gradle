@@ -11,6 +11,7 @@ repositories {
 dependencies {
     implementation libs.common
     implementation libs.slf4j.api
+    implementation "io.github.fungrim.blackan.extension:jetty:0.0.2-SNAPSHOT"
     // test classes
     testImplementation libs.junit.jupiter
     testImplementation libs.mockito

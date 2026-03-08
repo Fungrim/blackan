@@ -10,6 +10,7 @@ slf4j-api = "2.0.17"
 logback = "1.5.32"
 classgraph = "4.8.184"
 smallrye-config = "3.9.1"
+jetty = "12.1.7"
 
 [libraries]
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
@@ -24,3 +25,4 @@ logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "lo
 logback-core = { module = "ch.qos.logback:logback-core", version.ref = "logback" }
 classgraph = { module = "io.github.classgraph:classgraph", version.ref = "classgraph" }
 smallrye-config = { module = "io.smallrye.config:smallrye-config", version.ref = "smallrye-config" }
+jetty = { module = "org.eclipse.jetty:jetty-server", version.ref = "jetty" }

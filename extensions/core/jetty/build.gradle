@@ -9,9 +9,10 @@ repositories {
 }
 
 dependencies {
-    api libs.smallrye.config
     implementation project(':common')
     implementation project(':cdi-common')
+    implementation project(':extensions:bootstrap:smallrye-config')
+    implementation libs.jetty
     // test classes
     testImplementation project(':injector')
     testImplementation libs.junit.jupiter

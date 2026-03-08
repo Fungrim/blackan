@@ -21,8 +21,7 @@ public class Slf4jExtension {
     }
 
     @PostConstruct
-    public void init() {
-        
+    public void init() {   
     }
 
     @Produces

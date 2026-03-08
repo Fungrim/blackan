@@ -11,4 +11,5 @@ include(
     'isolates:runtime', 
     'plugins:gradle', 
     'extensions:bootstrap:slf4j',
-    'extensions:bootstrap:smallrye-config')
+    'extensions:bootstrap:smallrye-config',
+    'extensions:core:jetty')
