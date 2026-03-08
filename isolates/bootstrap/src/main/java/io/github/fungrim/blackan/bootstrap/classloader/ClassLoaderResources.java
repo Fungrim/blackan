@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.Resource;
 import io.github.classgraph.ScanResult;
+import io.github.fungrim.blackan.bootstrap.BootstrapLogger;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -58,11 +59,11 @@ public class ClassLoaderResources {
             throw new IllegalStateException("Unable to determine launch jar path");
         }
         String decodedPath = URLDecoder.decode(path, StandardCharsets.UTF_8);
-        System.out.println("ClassLoaderResources.getUrlPath: ");
-        System.out.println(" - decodedPath: " + decodedPath);
+        BootstrapLogger.log("ClassLoaderResources.getUrlPath: ");
+        BootstrapLogger.log(" - decodedPath: " + decodedPath);
         // the first get parent is the boot folder, the second the root
         Path root = new File(decodedPath).toPath().getParent().getParent();
-        System.out.println(" - root: " + root);
+        BootstrapLogger.log(" - root: " + root);
         return root;
     }
 

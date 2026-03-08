@@ -7,7 +7,7 @@ cdi-spec = "4.1.0"
 validation-api = "3.1.1"
 mockito = "5.14.2"
 slf4j-api = "2.0.17"
-common = "0.0.1-SNAPSHOT"
+common = "0.0.2-SNAPSHOT"
 
 [libraries]
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }

@@ -11,8 +11,8 @@ repositories {
 dependencies {
     implementation project(':common')
     implementation libs.slf4j.api
-    implementation libs.slf4j.jboss
-    implementation libs.jboss.logmanager
+    implementation libs.logback.classic
+    implementation libs.logback.core
     // test classes
     testImplementation libs.junit.jupiter
     testImplementation libs.mockito

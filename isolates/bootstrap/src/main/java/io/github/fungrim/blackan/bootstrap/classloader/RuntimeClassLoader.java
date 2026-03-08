@@ -4,6 +4,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.List;
 
+import io.github.fungrim.blackan.bootstrap.BootstrapLogger;
 import io.github.fungrim.blackan.bootstrap.layout.ApplicationLayout;
 import lombok.Getter;
 
@@ -36,8 +37,8 @@ public class RuntimeClassLoader extends URLClassLoader {
             }
             ApplicationLayoutReader layoutReader = new ApplicationLayoutReader(layout);
             List<URL> urls = layoutReader.readApplicationJars();
-            System.out.println("RuntimeClassLoader.build: ");
-            urls.forEach(url -> System.out.println(" - " + url));
+            BootstrapLogger.log("RuntimeClassLoader.build: ");
+            urls.forEach(url -> BootstrapLogger.log(" - " + url));
             return new RuntimeClassLoader(parent, layout, urls.toArray(new URL[urls.size()]));
         }
     }

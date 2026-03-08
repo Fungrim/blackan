@@ -7,6 +7,7 @@ import io.github.fungrim.blackan.common.api.BootStage;
 import io.github.fungrim.blackan.common.api.Extension;
 import io.github.fungrim.blackan.common.api.Stage;
 import io.github.fungrim.blackan.common.cdi.TargetAwareProvider;
+import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Priority;
 import jakarta.enterprise.inject.Produces;
 
@@ -16,11 +17,18 @@ import jakarta.enterprise.inject.Produces;
 public class Slf4jExtension {
 
     static {
-        System.setProperty("java.util.logging.manager", org.jboss.logmanager.LogManager.class.getName());
+        System.setProperty("slf4j.provider", "ch.qos.logback.classic.spi.LogbackServiceProvider");
+    }
+
+    @PostConstruct
+    public void init() {
+        
     }
 
     @Produces
     TargetAwareProvider<Logger> getLogger() {
-        return (target) -> LoggerFactory.getLogger(target.parentClass());
+        return (target) -> {
+            return LoggerFactory.getLogger(target.parentClass());
+        };
     }
 }

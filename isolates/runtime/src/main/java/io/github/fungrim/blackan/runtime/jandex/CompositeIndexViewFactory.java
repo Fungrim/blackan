@@ -13,6 +13,7 @@ import org.jboss.jandex.IndexView;
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.Resource;
 import io.github.classgraph.ScanResult;
+import io.github.fungrim.blackan.bootstrap.BootstrapLogger;
 import lombok.AllArgsConstructor;
 
 
@@ -23,7 +24,7 @@ public class CompositeIndexViewFactory {
 
     public IndexView create() {
         List<IndexView> indexes = new ArrayList<>();
-        System.out.println("CompositeIndexViewFactory.create: ");
+        BootstrapLogger.log("CompositeIndexViewFactory.create: ");
         try (ScanResult scanResult = createGraph().scan()) {
             scanResult.getResourcesWithPath("META-INF/jandex.idx")
                 .stream()
@@ -45,7 +46,7 @@ public class CompositeIndexViewFactory {
 
     private IndexView createIndex(Resource resource) {
         try {
-            System.out.println(" - resource: " + resource);
+            BootstrapLogger.log(" - resource: " + resource);
             IndexReader reader = new IndexReader(resource.open());
             return reader.read();
         } catch (IOException e) {

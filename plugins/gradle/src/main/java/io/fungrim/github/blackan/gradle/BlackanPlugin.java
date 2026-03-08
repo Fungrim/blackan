@@ -2,6 +2,7 @@ package io.fungrim.github.blackan.gradle;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
@@ -110,6 +111,7 @@ public class BlackanPlugin implements Plugin<Project> {
             c.setTransitive(true);
             c.setCanBeResolved(true);
             c.setCanBeConsumed(false);
+            c.getResolutionStrategy().cacheChangingModulesFor(0, TimeUnit.SECONDS);
         });
     }
 

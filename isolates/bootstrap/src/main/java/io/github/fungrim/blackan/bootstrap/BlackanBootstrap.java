@@ -11,8 +11,9 @@ public class BlackanBootstrap {
     public static void main(String[] args) throws NoSuchMethodException, IllegalAccessException, Throwable {
         // create application layout
         ApplicationLayout layout = ApplicationLayout.builder().build();
-        System.out.println("BlackanBootstrap.main: ");
-        System.out.println(" - layout: " + layout);
+        BootstrapLogger logger = BootstrapLogger.of(args);
+        logger.println("BlackanBootstrap.main: ");
+        logger.println(" - layout: " + layout);
         // create runtime loader
         RuntimeClassLoader loader = RuntimeClassLoader.builder()
                 .withLayout(layout)
@@ -20,8 +21,8 @@ public class BlackanBootstrap {
         // get runtime class 
         Thread.currentThread().setContextClassLoader(loader);
         Class<?> runtimeClass = loader.loadClass(layout.getRuntimeClassName());
-        System.out.println("BlackanBootstrap.main: ");
-        System.out.println(" - runtimeClass: " + runtimeClass);
+        logger.println("BlackanBootstrap.main: ");
+        logger.println(" - runtimeClass: " + runtimeClass);
         // go!
         MethodHandles
                 .lookup()

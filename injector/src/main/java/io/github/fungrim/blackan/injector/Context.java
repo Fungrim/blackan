@@ -424,25 +424,25 @@ public class Context implements Closeable {
 
     public void fire(Object event, Annotation... qualifiers) {
         checkClosed();
-        List<org.jboss.jandex.AnnotationInstance> jandexQualifiers = EventCoordinator.toJandexQualifiers(qualifiers);
+        List<AnnotationInstance> jandexQualifiers = EventCoordinator.toJandexQualifiers(qualifiers);
         EventCoordinator.fireObservers(this, observerRegistry.matchSync(event, jandexQualifiers), event);
     }
 
     public void fireInCustomOrder(Object event, Annotation... qualifiers) {
         checkClosed();
-        List<org.jboss.jandex.AnnotationInstance> jandexQualifiers = EventCoordinator.toJandexQualifiers(qualifiers);
+        List<AnnotationInstance> jandexQualifiers = EventCoordinator.toJandexQualifiers(qualifiers);
         EventCoordinator.fireObservers(this, observerRegistry.matchSync(event, jandexQualifiers, eventOrdering), event);
     }
 
     public void fireInReverseCustomOrder(Object event, Annotation... qualifiers) {
         checkClosed();
-        List<org.jboss.jandex.AnnotationInstance> jandexQualifiers = EventCoordinator.toJandexQualifiers(qualifiers);
+        List<AnnotationInstance> jandexQualifiers = EventCoordinator.toJandexQualifiers(qualifiers);
         EventCoordinator.fireObservers(this, observerRegistry.matchSync(event, jandexQualifiers, eventOrdering.reversed()), event);
     }
 
     public CompletionStage<Object> fireAsync(Object event, Annotation... qualifiers) {
         checkClosed();
-        List<org.jboss.jandex.AnnotationInstance> jandexQualifiers = EventCoordinator.toJandexQualifiers(qualifiers);
+        List<AnnotationInstance> jandexQualifiers = EventCoordinator.toJandexQualifiers(qualifiers);
         return EventCoordinator.fireObserversAsync(this, executorService, observerRegistry.matchAsync(event, jandexQualifiers), event);
     }
 
@@ -451,7 +451,7 @@ public class Context implements Closeable {
         java.util.concurrent.Executor executor = (options != null && options.getExecutor() != null)
                 ? options.getExecutor()
                 : executorService;
-        List<org.jboss.jandex.AnnotationInstance> jandexQualifiers = EventCoordinator.toJandexQualifiers(qualifiers);
+        List<AnnotationInstance> jandexQualifiers = EventCoordinator.toJandexQualifiers(qualifiers);
         return EventCoordinator.fireObserversAsync(this, executor, observerRegistry.matchAsync(event, jandexQualifiers), event);
     }
 

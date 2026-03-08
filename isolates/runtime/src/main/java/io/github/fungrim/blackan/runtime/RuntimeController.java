@@ -33,7 +33,11 @@ public class RuntimeController {
                 shutdownLatch.countDown();
             }
         }, "blackan-shutdown-hook"));
-        hold();
+        try {
+            hold();
+        } finally {
+            context.close();
+        }
     }
 
     private void hold() throws InterruptedException {

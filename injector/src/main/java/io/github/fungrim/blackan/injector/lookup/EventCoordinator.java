@@ -5,10 +5,12 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 
 import org.jboss.jandex.AnnotationInstance;
+import org.jboss.jandex.AnnotationValue;
 import org.jboss.jandex.DotName;
 
 import io.github.fungrim.blackan.common.cdi.ObserverMethod;
@@ -29,7 +31,7 @@ public class EventCoordinator {
     }
 
     public static CompletionStage<Object> fireObserversAsync(Context context, Executor executor, List<ObserverMethod> observers, Object event) {
-        return java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+        return CompletableFuture.supplyAsync(() -> {
             for (ObserverMethod observer : observers) {
                 invokeObserver(context, observer, event);
             }
@@ -46,8 +48,7 @@ public class EventCoordinator {
             method.invoke(owner, args);
             method.setAccessible(false);
         } catch (Exception e) {
-            throw new ConstructionException(
-                    "Failed to invoke observer method " + method.getDeclaringClass().getName() + "." + method.getName(), e);
+            throw new ConstructionException("Failed to invoke observer method " + method.getDeclaringClass().getName() + "." + method.getName(), e);
         }
     }
 
@@ -74,22 +75,22 @@ public class EventCoordinator {
         List<AnnotationInstance> result = new ArrayList<>();
         for (Annotation qualifier : qualifiers) {
             DotName name = DotName.createSimple(qualifier.annotationType());
-            List<org.jboss.jandex.AnnotationValue> values = extractAnnotationValues(qualifier);
+            List<AnnotationValue> values = extractAnnotationValues(qualifier);
             result.add(AnnotationInstance.create(name, null, values));
         }
         return result;
     }
 
-    private static List<org.jboss.jandex.AnnotationValue> extractAnnotationValues(Annotation annotation) {
-        List<org.jboss.jandex.AnnotationValue> values = new ArrayList<>();
-        for (java.lang.reflect.Method member : annotation.annotationType().getDeclaredMethods()) {
+    private static List<AnnotationValue> extractAnnotationValues(Annotation annotation) {
+        List<AnnotationValue> values = new ArrayList<>();
+        for (Method member : annotation.annotationType().getDeclaredMethods()) {
             if (member.getParameterCount() != 0 || member.getDeclaringClass() == Annotation.class) {
                 continue;
             }
             try {
                 Object val = member.invoke(annotation);
                 if (val instanceof Class<?> clazz) {
-                    values.add(org.jboss.jandex.AnnotationValue.createClassValue(member.getName(),
+                    values.add(AnnotationValue.createClassValue(member.getName(),
                             org.jboss.jandex.Type.create(DotName.createSimple(clazz), org.jboss.jandex.Type.Kind.CLASS)));
                 }
             } catch (Exception e) {
