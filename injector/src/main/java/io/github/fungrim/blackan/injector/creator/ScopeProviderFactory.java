@@ -11,6 +11,7 @@ import org.jboss.jandex.DotName;
 
 import io.github.fungrim.blackan.injector.Context;
 import io.github.fungrim.blackan.injector.Scope;
+import io.github.fungrim.blackan.injector.context.DecoratedInstance;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Provider;
 import lombok.AllArgsConstructor;
@@ -54,6 +55,23 @@ public class ScopeProviderFactory implements ProviderFactory {
         } finally {
             lock.writeLock().unlock();
         }
+    }
+
+    @Override
+    public <T> DecoratedInstance<T> decorate(T instance) {
+        FieldInvocation.of(context, instance).forEach(FieldInvocation::set);
+        MethodInvocation.of(context, instance).forEach(MethodInvocation::invoke);
+        return new DecoratedInstance<>() {
+            @Override
+            public T get() {
+                return instance;
+            }
+
+            @Override
+            public void destroy() {
+                // no-op for now
+            }
+        };
     }
 
     @Override

@@ -5,6 +5,7 @@ import java.util.Optional;
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
 
+import io.github.fungrim.blackan.injector.context.DecoratedInstance;
 import jakarta.inject.Provider;
 
 public interface ProviderFactory {
@@ -12,6 +13,8 @@ public interface ProviderFactory {
     public default <T> Provider<T> create(ClassInfo type, Class<T> clazzType) {
         return create(type, Optional.empty(), clazzType);
     }
+
+    public <T> DecoratedInstance<T> decorate(T instance);
 
     public <T> Provider<T> create(ClassInfo type, Optional<InjectionLocation<T>> location, Class<T> clazzType);
 

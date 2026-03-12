@@ -39,6 +39,7 @@ import io.github.fungrim.blackan.common.cdi.ProcessObserverMethod;
 import io.github.fungrim.blackan.common.util.Arguments;
 import io.github.fungrim.blackan.injector.context.ClassAccessImpl;
 import io.github.fungrim.blackan.injector.context.ClassInfoAccessImpl;
+import io.github.fungrim.blackan.injector.context.DecoratedInstance;
 import io.github.fungrim.blackan.injector.context.ProcessScopeProvider;
 import io.github.fungrim.blackan.injector.context.ScopeRegistry;
 import io.github.fungrim.blackan.injector.context.ScopeRegistry.Execution;
@@ -488,6 +489,13 @@ public class Context implements Closeable {
         Arguments.notNull(type, "Type");
         return getInstance(type).get(type);
     }
+
+    public <T> DecoratedInstance<T> decorate(T instance) {
+        checkClosed();
+        Arguments.notNull(instance, "Instance");
+        return instanceFactory.decorate(instance);
+    }
+
 
     // --- Destroy ---
 

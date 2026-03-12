@@ -11,6 +11,7 @@ logback = "1.5.32"
 classgraph = "4.8.184"
 smallrye-config = "3.9.1"
 jetty = "12.1.7"
+servlet-api = "6.1.0"
 
 [libraries]
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
@@ -26,3 +27,6 @@ logback-core = { module = "ch.qos.logback:logback-core", version.ref = "logback"
 classgraph = { module = "io.github.classgraph:classgraph", version.ref = "classgraph" }
 smallrye-config = { module = "io.smallrye.config:smallrye-config", version.ref = "smallrye-config" }
 jetty = { module = "org.eclipse.jetty:jetty-server", version.ref = "jetty" }
+jetty-servlet = { module = "org.eclipse.jetty.ee10:jetty-ee10-servlet", version.ref = "jetty" }
+jetty-cdi = { module = "org.eclipse.jetty.ee10:jetty-ee10-cdi", version.ref = "jetty" }
+servlet-api = { module = "jakarta.servlet:jakarta.servlet-api", version.ref = "servlet-api" }

@@ -101,6 +101,11 @@ public class RecursiveInstance implements LimitedInstance {
         Collection<ClassInfo> allAssignables;
         if (typeInfo == null || typeInfo.isInterface()) {
             allAssignables = index.getAllKnownImplementations(key.type());
+            if(allAssignables.isEmpty()) {
+                // this is the case if the key type is not in the index, and is a class 
+                // or an abstract class and not an interface
+                allAssignables = index.getAllKnownSubclasses(key.type());
+            }
         } else {
             List<ClassInfo> list = new ArrayList<>(index.getAllKnownSubclasses(key.type()));
             list.add(0, typeInfo);

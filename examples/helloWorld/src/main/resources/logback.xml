@@ -14,4 +14,7 @@
   <root level="debug">
     <appender-ref ref="STDOUT"/>
   </root>
+
+  <logger name="io.github.fungrim.blackan" level="debug"/>
+  <logger name="org.eclipse.jetty" level="info"/>
 </configuration>

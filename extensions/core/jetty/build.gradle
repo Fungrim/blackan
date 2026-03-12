@@ -11,8 +11,12 @@ repositories {
 dependencies {
     implementation project(':common')
     implementation project(':cdi-common')
+    implementation project(':injector')
     implementation project(':extensions:bootstrap:smallrye-config')
     implementation libs.jetty
+    implementation libs.jetty.servlet
+    implementation libs.jetty.cdi
+    api libs.servlet.api
     // test classes
     testImplementation project(':injector')
     testImplementation libs.junit.jupiter

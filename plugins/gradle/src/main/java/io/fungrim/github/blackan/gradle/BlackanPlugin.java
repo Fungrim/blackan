@@ -37,6 +37,16 @@ public class BlackanPlugin implements Plugin<Project> {
         appLibs.boot().forEach(gav -> project.getDependencies().add("blackanBoot", gav));
         appLibs.runtime().forEach(gav -> project.getDependencies().add("blackanRuntime", gav));
 
+        // align boot and runtime resolution with runtimeClasspath so that
+        // overlapping dependencies use the same Gradle-resolved version
+        project.afterEvaluate(p -> {
+            Configuration runtimeClasspath = p.getConfigurations().findByName("runtimeClasspath");
+            if (runtimeClasspath != null) {
+                bootConfig.shouldResolveConsistentlyWith(runtimeClasspath);
+                blackanRuntime.shouldResolveConsistentlyWith(runtimeClasspath);
+            }
+        });
+
         // create directories
         Provider<Directory> appDir = project.getLayout().getBuildDirectory().dir("blackan-app");
         Provider<Directory> bootDir = appDir.map(d -> d.dir("boot"));

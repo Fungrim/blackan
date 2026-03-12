@@ -9,6 +9,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.IndexView;
 
+import io.github.fungrim.blackan.injector.context.DecoratedInstance;
 import io.github.fungrim.blackan.injector.creator.ProviderFactory;
 
 public class CachingInstanceFactory implements InstanceFactory{
@@ -35,6 +36,11 @@ public class CachingInstanceFactory implements InstanceFactory{
         }
     }
     
+    @Override
+    public <T> DecoratedInstance<T> decorate(T instance) {
+        return creatorFactory.decorate(instance);
+    }
+
     @Override
     public void evict(DotName type) {
         lock.writeLock().lock();

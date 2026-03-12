@@ -15,8 +15,10 @@ import org.jboss.jandex.Indexer;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import io.github.fungrim.blackan.injector.context.DecoratedInstance;
 import io.github.fungrim.blackan.injector.creator.InjectionLocation;
 import io.github.fungrim.blackan.injector.creator.ProviderFactory;
+import io.github.fungrim.blackan.injector.lookup.stubs.AbstractTestService;
 import io.github.fungrim.blackan.injector.lookup.stubs.AlternativeBean;
 import io.github.fungrim.blackan.injector.lookup.stubs.DefaultBean;
 import io.github.fungrim.blackan.injector.lookup.stubs.DisabledAlternativeBean;
@@ -33,6 +35,7 @@ import io.github.fungrim.blackan.injector.lookup.stubs.SamePriorityBeanB;
 import io.github.fungrim.blackan.injector.lookup.stubs.ServiceType;
 import io.github.fungrim.blackan.injector.lookup.stubs.SlowServiceBean;
 import io.github.fungrim.blackan.injector.lookup.stubs.TestService;
+import io.github.fungrim.blackan.injector.lookup.stubs.TestServiceSubclass;
 import io.github.fungrim.blackan.injector.lookup.stubs.Tracked;
 import io.github.fungrim.blackan.injector.lookup.stubs.TrackedFastBean;
 import io.github.fungrim.blackan.injector.lookup.stubs.TrackedSlowBean;
@@ -57,6 +60,11 @@ class RecursiveInstanceTest {
         }
 
         @Override
+        public <T> DecoratedInstance<T> decorate(T instance) {
+            return null;
+        }
+
+        @Override
         public void evict(DotName type) {}
 
         @Override
@@ -64,6 +72,14 @@ class RecursiveInstanceTest {
     };
 
     private static RecursiveInstance instance(Class<?>... stubClasses) {
+        return createInstance(TestService.class, stubClasses);
+    }
+
+    private static RecursiveInstance abstractInstance(Class<?>... stubClasses) {
+        return createInstance(AbstractTestService.class, stubClasses);
+    }
+
+    private static RecursiveInstance createInstance(Class<?> keyClass, Class<?>... stubClasses) {
         Indexer indexer = new Indexer();
         for (Class<?> clazz : stubClasses) {
             try {
@@ -73,7 +89,7 @@ class RecursiveInstanceTest {
             }
         }
         Index localIndex = indexer.complete();
-        RecursionKey key = RecursionKey.of(TestService.class);
+        RecursionKey key = RecursionKey.of(keyClass);
         InstanceFactory localFactory = new InstanceFactory() {
             @Override
             public LimitedInstance create(RecursionKey k) {
@@ -81,6 +97,7 @@ class RecursiveInstanceTest {
             }
             @Override public void evict(DotName t) {}
             @Override public void close() {}
+            @Override public <T> DecoratedInstance<T> decorate(T instance) { return null; }
         };
         return new RecursiveInstance(key, CREATOR_FACTORY, localFactory, localIndex, Set.of());
     }
@@ -348,6 +365,18 @@ class RecursiveInstanceTest {
             LimitedInstance selected = inst.select();
             assertTrue(selected.isResolvable());
             assertTrue(selected.get(TestService.class) instanceof DefaultBean);
+        }
+    }
+
+    @Nested
+    class AbstractBeanSelection {
+     
+        @Test
+        void selectAbstractBeanReturnsConcreteImplementation() {
+            var inst = abstractInstance(TestServiceSubclass.class);
+            LimitedInstance selected = inst.select();
+            assertTrue(selected.isResolvable());
+            assertTrue(selected.get(AbstractTestService.class) instanceof TestServiceSubclass);
         }
     }
 }
