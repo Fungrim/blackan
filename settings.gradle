@@ -12,4 +12,5 @@ include(
     'plugins:gradle', 
     'extensions:bootstrap:slf4j',
     'extensions:bootstrap:smallrye-config',
-    'extensions:core:jetty')
+    'extensions:core:jetty',
+    'extensions:core:jackson')
