@@ -2,11 +2,10 @@ package io.github.fungrim.blackan.injector.context;
 
 import org.jboss.jandex.DotName;
 
-import io.github.fungrim.blackan.injector.Context;
 import lombok.AllArgsConstructor;
 
 @AllArgsConstructor
-public class ClassAccessImpl implements Context.ClassAccess {
+public class ClassAccessImpl implements ClassAccess {
 
     private final Class<?> cl;
 
@@ -18,10 +17,5 @@ public class ClassAccessImpl implements Context.ClassAccess {
     @Override
     public DotName name() {
         return DotName.createSimple(cl);
-    }
-
-    @Override
-    public boolean isInterface() {
-        return cl.isInterface();
     }
 }

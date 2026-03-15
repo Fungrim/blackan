@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 import io.github.fungrim.blackan.common.cdi.InjectionTarget;
 import io.github.fungrim.blackan.common.cdi.TargetType;
@@ -54,7 +55,7 @@ public class FieldInvocation {
             field.set(object, InvocationUtil.resolveInjectionPoint(context, key, field.getGenericType(), target));
             field.setAccessible(false);
         } catch (Exception e) {
-            throw new ConstructionException("Failed to invoke method " + field.getName(), e);
+            throw new ConstructionException("Failed to set field " + field.getName() + (Objects.isNull(object) ? "" : " on " + object.getClass().getName()), e);
         }
     }
 }

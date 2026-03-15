@@ -13,6 +13,7 @@ import org.jboss.jandex.MethodInfo;
 import org.jboss.jandex.MethodParameterInfo;
 
 import io.github.fungrim.blackan.common.cdi.ObserverMethod;
+import io.github.fungrim.blackan.injector.util.QualifierUtil;
 import jakarta.enterprise.event.Observes;
 import jakarta.enterprise.event.ObservesAsync;
 
@@ -112,7 +113,29 @@ public class ObserverRegistry {
         if (observerQualifiers.isEmpty()) {
             return true;
         }
+        
+        boolean observerHasAny = QualifierUtil.hasAnyQualifierJandex(observerQualifiers);
+        if (observerHasAny) {
+            return true;
+        }
+        
+        boolean observerHasDefault = QualifierUtil.hasDefaultQualifierJandex(observerQualifiers);
+        if (observerHasDefault) {
+            List<AnnotationInstance> normalizedEventQualifiers = 
+                    QualifierUtil.normalizeEventQualifiersForMatching(eventQualifiers);
+            boolean eventHasDefault = QualifierUtil.hasDefaultQualifierJandex(normalizedEventQualifiers);
+            if (!eventHasDefault) {
+                return false;
+            }
+        }
+        
         for (AnnotationInstance required : observerQualifiers) {
+            if (required.name().equals(QualifierUtil.ANY_NAME)) {
+                continue;
+            }
+            if (required.name().equals(QualifierUtil.DEFAULT_NAME)) {
+                continue;
+            }
             boolean found = eventQualifiers.stream()
                     .anyMatch(eq -> eq.name().equals(required.name()) && valuesMatch(required, eq));
             if (!found) {

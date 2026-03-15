@@ -16,9 +16,13 @@ public class ContextServletInitializer implements ServletContainerInitializer {
     @Inject
     ContextDecorator contextDecorator;
 
+    @Inject
+    ContextServletListener contextServletListener;
+
     @Override
     public void onStartup(Set<Class<?>> c, ServletContext ctx) throws ServletException {
         ServletContextHandler context = ServletContextHandler.getServletContextHandler(ctx);
         context.getObjectFactory().addDecorator(contextDecorator);
+        context.addEventListener(contextServletListener);
     }
 }

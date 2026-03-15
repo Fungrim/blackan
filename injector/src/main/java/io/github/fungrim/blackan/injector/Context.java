@@ -37,8 +37,7 @@ import io.github.fungrim.blackan.common.cdi.ObserverMethod;
 import io.github.fungrim.blackan.common.cdi.ProcessAnnotatedType;
 import io.github.fungrim.blackan.common.cdi.ProcessObserverMethod;
 import io.github.fungrim.blackan.common.util.Arguments;
-import io.github.fungrim.blackan.injector.context.ClassAccessImpl;
-import io.github.fungrim.blackan.injector.context.ClassInfoAccessImpl;
+import io.github.fungrim.blackan.injector.context.ClassAccess;
 import io.github.fungrim.blackan.injector.context.DecoratedInstance;
 import io.github.fungrim.blackan.injector.context.ProcessScopeProvider;
 import io.github.fungrim.blackan.injector.context.ScopeRegistry;
@@ -54,6 +53,7 @@ import io.github.fungrim.blackan.injector.lookup.LimitedInstance;
 import io.github.fungrim.blackan.injector.lookup.ObserverRegistry;
 import io.github.fungrim.blackan.injector.lookup.RecursionKey;
 import io.github.fungrim.blackan.injector.producer.ProducerRegistry;
+import io.github.fungrim.blackan.injector.util.SafeCallable;
 import jakarta.enterprise.context.BeforeDestroyed;
 import jakarta.enterprise.context.Destroyed;
 import jakarta.enterprise.context.Initialized;
@@ -115,27 +115,7 @@ public class Context implements Closeable {
         this.instanceFactory = new CachingInstanceFactory(creatorFactory, index, workingVetoedTypes);
         initialize(workingVetoedTypes);
         this.vetoedTypes = parent != null ? workingVetoedTypes : Collections.unmodifiableSet(workingVetoedTypes);
-    }
-
-    // --- ClassAccess interface ---
-
-    public static interface ClassAccess {
-
-        public static ClassAccess of(final Class<?> cl) {
-            return new ClassAccessImpl(cl);
-        }
-
-        public static ClassAccess of(final ClassInfo info) {
-            return new ClassInfoAccessImpl(info);
-        }
-
-        boolean isInterface();
-    
-        Class<?> load(ClassLoader loader);
-
-        DotName name();
-
-    }
+    }    
 
     // --- Builder ---
 
@@ -458,38 +438,93 @@ public class Context implements Closeable {
 
     // --- Lookup ---
 
+    /**
+     * Lookup a class from the context. This does not return classes that
+     * are not in the context, so a class might still be possible to load even
+     * if not found by this method.  
+     * 
+     * @param name The name of the class, must not be null
+     * @return An optional class access, never null
+     */
     public Optional<ClassAccess> findClass(DotName name) {
         checkClosed();
         return Optional.ofNullable(index.getClassByName(name)).map(ClassAccess::of);
     }
 
+    /**
+     * Lookup a class from the context. This does not return classes that
+     * are not in the context, so a class might still be possible to load even
+     * if not found by this method.  
+     * 
+     * @param type The class to lookup, must not be null
+     * @return An optional class access, never null
+     */
     public Optional<ClassAccess> findClass(Class<?> type) {
         Arguments.notNull(type, "Type");
         return findClass(DotName.createSimple(type));
     }
 
+    /**
+     * Get an instance from the context. This does not return classes that
+     * are not in the context, so a class might still be possible to load even
+     * if not found by this method.  
+     * 
+     * @param name The name of the class, must not be null
+     * @return An optional instance, never null
+     */
     public LimitedInstance getInstance(DotName type) {
         checkClosed();
         Arguments.notNull(type, "Type");
         return instanceFactory.create(RecursionKey.of(type));
     }
 
+    /**
+     * Get an instance from the context. This does not return classes that
+     * are not in the context, so a class might still be possible to load even
+     * if not found by this method.  
+     * 
+     * @param name The name of the class, must not be null
+     * @return An optional instance, never null
+     */
     public LimitedInstance getInstance(ClassInfo type) {
         checkClosed();
         Arguments.notNull(type, "Type");
         return instanceFactory.create(RecursionKey.of(type));
     }
 
+    /**
+     * Get an instance from the context. This does not return classes that
+     * are not in the context, so a class might still be possible to load even
+     * if not found by this method.  
+     * 
+     * @param type The class to lookup, must not be null
+     * @return An optional instance, never null
+     */
     public LimitedInstance getInstance(Class<?> type) {
         Arguments.notNull(type, "Type");
         return getInstance(DotName.createSimple(type));
     }
 
+    /**
+     * Get an instance from the context. This does not return classes that
+     * are not in the context, so a class might still be possible to load even
+     * if not found by this method.  
+     * 
+     * @param type The class to lookup, must not be null
+     * @return An optional instance, never null
+     */
     public <T> T get(Class<T> type) {
         Arguments.notNull(type, "Type");
         return getInstance(type).get(type);
     }
 
+    /**
+     * Decorate an instance with interceptors and observers.
+     * 
+     * @param <T> The type of the instance
+     * @param instance The instance to decorate, must not be null
+     * @return A decorated instance, never null
+     */
     public <T> DecoratedInstance<T> decorate(T instance) {
         checkClosed();
         Arguments.notNull(instance, "Instance");
@@ -518,17 +553,39 @@ public class Context implements Closeable {
 
     // --- Class loading ---
 
+    /**
+     * Load a class from the context classloader. This will load classes
+     * that are not in the context as well. 
+     * 
+     * @param type The class to load, must not be null
+     * @throws ConstructionException if the class cannot be loaded
+     * @return The loaded class, never null
+     */
     public Class<?> loadClass(Class<?> type) {
         Arguments.notNull(type, "Type");
         return loadClass(DotName.createSimple(type));
     }
 
+    /**
+     * Load a named class from the context classloader. This will load classes
+     * that are not in the context as well. 
+     * 
+     * @param type The class to load, must not be null
+     * @throws ConstructionException if the class cannot be loaded
+     * @return The loaded class, never null
+     */
     public Class<?> loadClass(DotName clazz) {
         Arguments.notNull(clazz, "Class");
-        return loadClass(findClass(clazz).orElseThrow(() -> new ConstructionException("Failed to find class: " + clazz.toString())));
+        var opt = findClass(clazz);
+        if (opt.isEmpty()) {
+            // load from outside of index
+            return loadClass(ClassAccess.of(clazz));
+        } else {
+            return loadClass(opt.get());
+        }
     }
 
-    public Class<?> loadClass(ClassAccess access) {
+    private Class<?> loadClass(ClassAccess access) {
         Arguments.notNull(access, "Access");
         return access.load(classLoader());
     }
@@ -547,6 +604,11 @@ public class Context implements Closeable {
         }
     }
 
+    public <T> T enterSafeScope(SafeCallable<T> supplier) {
+        try (Execution e = scopeRegistry.enter(this)) {
+            return supplier.call();
+        }
+    }
 
     // --- Subcontext ---
 

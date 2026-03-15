@@ -9,7 +9,10 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
+import jakarta.enterprise.inject.Any;
+import jakarta.enterprise.inject.Default;
 import jakarta.enterprise.util.Nonbinding;
+import jakarta.inject.Named;
 
 public record ProducerCacheKey(
     Class<?> rawType,
@@ -28,12 +31,37 @@ public record ProducerCacheKey(
         } else {
             throw new IllegalArgumentException("Unsupported return type: " + returnType);
         }
-        List<String> qualifiers = Arrays.stream(annotations)
-                .filter(a -> a.annotationType().isAnnotationPresent(jakarta.inject.Qualifier.class))
-                .map(ProducerCacheKey::qualifierIdentity)
-                .sorted()
-                .toList();
+        List<String> qualifiers = normalizeQualifiers(annotations);
         return new ProducerCacheKey(raw, typeArgs, qualifiers);
+    }
+
+    private static List<String> normalizeQualifiers(Annotation[] annotations) {
+        List<Annotation> rawQualifiers = Arrays.stream(annotations)
+                .filter(a -> a.annotationType().isAnnotationPresent(jakarta.inject.Qualifier.class))
+                .toList();
+        
+        boolean hasCustomQualifier = rawQualifiers.stream()
+                .anyMatch(a -> !isBuiltInQualifier(a));
+        boolean hasAny = rawQualifiers.stream()
+                .anyMatch(a -> a.annotationType() == Any.class);
+        boolean hasDefault = rawQualifiers.stream()
+                .anyMatch(a -> a.annotationType() == Default.class);
+        
+        List<String> result = new java.util.ArrayList<>(rawQualifiers.stream()
+                .map(ProducerCacheKey::qualifierIdentity)
+                .toList());
+        
+        if (!hasAny && !hasDefault && !hasCustomQualifier) {
+            result.add(qualifierIdentity(Default.Literal.INSTANCE));
+        }
+        
+        result.sort(String::compareTo);
+        return result;
+    }
+
+    private static boolean isBuiltInQualifier(Annotation a) {
+        Class<?> type = a.annotationType();
+        return type == Default.class || type == Any.class || type == Named.class;
     }
 
     private static String qualifierIdentity(Annotation annotation) {

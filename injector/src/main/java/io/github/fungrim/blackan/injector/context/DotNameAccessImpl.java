@@ -1,27 +1,26 @@
 package io.github.fungrim.blackan.injector.context;
 
-import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
 
 import io.github.fungrim.blackan.injector.creator.ConstructionException;
 import lombok.AllArgsConstructor;
 
 @AllArgsConstructor
-public class ClassInfoAccessImpl implements ClassAccess {
+public class DotNameAccessImpl implements ClassAccess {
 
-    private final ClassInfo info;
+    private final DotName name;
 
     @Override
     public Class<?> load(ClassLoader loader) {
         try {
-            return loader.loadClass(info.name().toString());
+            return loader.loadClass(name.toString());
         } catch (ClassNotFoundException e) {
-            throw new ConstructionException("Failed to load class: " + info.name(), e);
+            throw new ConstructionException("Failed to load class: " + name, e);
         }
     }
 
     @Override
     public DotName name() {
-        return info.name();
+        return name;
     }
 }

@@ -6,6 +6,7 @@ import io.github.fungrim.blackan.common.api.Stage;
 import jakarta.annotation.Priority;
 import jakarta.enterprise.inject.Default;
 import jakarta.enterprise.inject.Instance;
+import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import tools.jackson.databind.ObjectMapper;
@@ -24,6 +25,7 @@ public class JacksonExtension {
     ObjectMapperConfig config;
 
     @Default
+    @Produces
     @Singleton
     public ObjectMapper objectMapper() {
         var builder = JsonMapper.builder();

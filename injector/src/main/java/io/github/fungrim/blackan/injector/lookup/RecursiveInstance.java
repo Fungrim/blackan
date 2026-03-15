@@ -15,6 +15,7 @@ import org.jboss.jandex.DotName;
 import org.jboss.jandex.IndexView;
 
 import io.github.fungrim.blackan.injector.creator.ProviderFactory;
+import io.github.fungrim.blackan.injector.util.QualifierUtil;
 import jakarta.enterprise.inject.AmbiguousResolutionException;
 import jakarta.enterprise.inject.Instance;
 import jakarta.enterprise.inject.UnsatisfiedResolutionException;
@@ -63,14 +64,32 @@ public class RecursiveInstance implements LimitedInstance {
             return resolveByPriority(enabledAlternatives);
         }
 
-        // If there's a @Default bean and no enabled alternatives, it wins
-        for (ClassInfo c : candidates) {
-            if (c.hasAnnotation(DEFAULT)) {
-                return Optional.of(c);
-            }
+        // Filter out disabled alternatives (those without @Priority)
+        List<ClassInfo> nonAlternatives = candidates.stream()
+                .filter(c -> !c.hasAnnotation(ALTERNATIVE))
+                .toList();
+        
+        // Check for disabled alternatives - they cause ambiguity even though they can't win
+        boolean hasDisabledAlternatives = candidates.stream()
+                .anyMatch(c -> c.hasAnnotation(ALTERNATIVE) && !c.hasAnnotation(PRIORITY));
+        
+        // If there's exactly one bean with explicit @Default among non-alternatives, it wins
+        // (explicit @Default beats disabled alternatives)
+        List<ClassInfo> explicitDefaults = nonAlternatives.stream()
+                .filter(c -> c.hasAnnotation(DEFAULT))
+                .toList();
+        if (explicitDefaults.size() == 1) {
+            return Optional.of(explicitDefaults.get(0));
         }
-        // Fall back to highest @Priority among all candidates
-        return resolveByPriority(candidates);
+        
+        // If exactly one non-alternative candidate and no disabled alternatives, it wins
+        // (disabled alternatives cause ambiguity with implicit @Default beans)
+        if (nonAlternatives.size() == 1 && !hasDisabledAlternatives) {
+            return Optional.of(nonAlternatives.get(0));
+        }
+        
+        // Fall back to highest @Priority among non-alternative candidates
+        return resolveByPriority(nonAlternatives);
     }
 
     private static Optional<ClassInfo> resolveByPriority(Collection<ClassInfo> candidates) {
@@ -99,22 +118,40 @@ public class RecursiveInstance implements LimitedInstance {
     private List<ClassInfo> computeCandidates() {
         ClassInfo typeInfo = index.getClassByName(key.type());
         Collection<ClassInfo> allAssignables;
+        boolean isConcreteClassLookup = false;
         if (typeInfo == null || typeInfo.isInterface()) {
             allAssignables = index.getAllKnownImplementations(key.type());
             if(allAssignables.isEmpty()) {
-                // this is the case if the key type is not in the index, and is a class 
-                // or an abstract class and not an interface
                 allAssignables = index.getAllKnownSubclasses(key.type());
             }
         } else {
             List<ClassInfo> list = new ArrayList<>(index.getAllKnownSubclasses(key.type()));
             list.add(0, typeInfo);
             allAssignables = list;
+            isConcreteClassLookup = true;
         }
+        boolean lookupHasAny = QualifierUtil.hasAnyQualifier(key.qualifiers());
+        boolean lookupRequiresDefault = QualifierUtil.shouldImplyDefault(key.qualifiers());
+        final boolean concreteClassLookup = isConcreteClassLookup;
+        
         return allAssignables.stream()
                 .filter(c -> !vetoedTypes.contains(c.name()))
-                .filter(c -> key.qualifiers().isEmpty() || matchesAllQualifiers(c, key.qualifiers()))
+                .filter(c -> matchesCandidateQualifiers(c, key.qualifiers(), lookupHasAny, lookupRequiresDefault, concreteClassLookup))
                 .toList();
+    }
+
+    private boolean matchesCandidateQualifiers(ClassInfo candidate, List<Annotation> lookupQualifiers, 
+            boolean lookupHasAny, boolean lookupRequiresDefault, boolean concreteClassLookup) {
+        if (lookupHasAny) {
+            return true;
+        }
+        if (concreteClassLookup && candidate.name().equals(key.type())) {
+            return true;
+        }
+        if (lookupRequiresDefault) {
+            return QualifierUtil.beanMatchesDefault(candidate, index);
+        }
+        return matchesAllQualifiers(candidate, lookupQualifiers);
     }
 
     @Override

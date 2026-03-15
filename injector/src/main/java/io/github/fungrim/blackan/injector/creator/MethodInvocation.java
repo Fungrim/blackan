@@ -7,6 +7,7 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 import io.github.fungrim.blackan.common.cdi.InjectionTarget;
 import io.github.fungrim.blackan.common.cdi.TargetType;
@@ -56,7 +57,7 @@ public class MethodInvocation {
             method.invoke(object, InvocationUtil.resolveParameters(context, parameters, genericTypes, targets));
             method.setAccessible(false);
         } catch (Exception e) {
-            throw new ConstructionException("Failed to invoke method " + method.getName(), e);
+            throw new ConstructionException("Failed to invoke method " + method.getName() + (Objects.isNull(object) ? "" : " on " + object.getClass().getName()), e);
         }
     }
 

@@ -1,7 +1,6 @@
 package io.github.fungrim.blackan.extension.jetty;
 
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 
 import org.eclipse.jetty.ee10.servlet.ServletContextHandler;
@@ -69,15 +68,11 @@ public class JettyExtension {
         connector.setPort(serverConfig.port());
         server.setConnectors(new Connector[] { connector });
         ContextHandlerCollection contexts = new ContextHandlerCollection();
-        context.enterScope(new Callable<Void>() {
-
-            @Override
-            public Void call() throws Exception {
-                mountServletContexts(contexts);
-                server.setHandler(contexts);
-                server.start();
-                return null;
-            }
+        ServletScopedContext.enter(context, () -> {
+            mountServletContexts(contexts);
+            server.setHandler(contexts);
+            server.start();
+            return null;
         });
     }
 
@@ -117,7 +112,7 @@ public class JettyExtension {
 
     private ThreadPool createThreadPool() {
         var pool = new QueuedThreadPool();
-        if (serverConfig.threading().maxConcurrentTasks() > 0) {
+        if (serverConfig.threading().maxConcurrentTasks() <= 0) {
             pool.setVirtualThreadsExecutor(Executors.newVirtualThreadPerTaskExecutor());
         } else {
             VirtualThreadPool virtualExecutor = new VirtualThreadPool();
@@ -132,13 +127,9 @@ public class JettyExtension {
         log.info("JettyExtension stopping");
         if (server != null) {
             try {
-                context.enterScope(new Callable<Void>() {
-            
-                    @Override
-                    public Void call() throws Exception {
-                        server.stop();
-                        return null;
-                    }
+                ServletScopedContext.enter(context, () -> {
+                    server.stop();
+                    return null;
                 });
             } catch (Exception e) {
                 log.error("Failed to stop Jetty server", e);

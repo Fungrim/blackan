@@ -15,7 +15,7 @@ import jakarta.inject.Inject;
 public class ContextDecorator implements Decorator {
 
     @Inject
-    Context context;
+    Context rootContext;
 
     @Inject
     Logger log;
@@ -24,10 +24,14 @@ public class ContextDecorator implements Decorator {
 
     @Override
     public <T> T decorate(T o) {
-        log.debug("Decorating {}", o.getClass().getName());
-        var decoration = context.decorate(o);
-        decoratedInstances.put(o, decoration);
-        return decoration.get();
+        var opt = ServletScopedContext.current();
+        var context = opt.orElse(rootContext);
+        log.debug("Decorating {} with scope {}", o.getClass().getName(), context.scope());
+        return context.enterSafeScope(() -> {
+            var decoration = context.decorate(o);
+            decoratedInstances.put(o, decoration);
+            return decoration.get();
+        });
     }
 
     @Override
