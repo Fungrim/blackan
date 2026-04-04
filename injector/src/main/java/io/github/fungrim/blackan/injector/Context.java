@@ -48,10 +48,10 @@ import io.github.fungrim.blackan.injector.creator.ProviderFactory;
 import io.github.fungrim.blackan.injector.creator.ScopeProviderFactory;
 import io.github.fungrim.blackan.injector.lookup.CachingInstanceFactory;
 import io.github.fungrim.blackan.injector.lookup.EventCoordinator;
+import io.github.fungrim.blackan.injector.lookup.InjectionPointLookupKey;
 import io.github.fungrim.blackan.injector.lookup.InstanceFactory;
 import io.github.fungrim.blackan.injector.lookup.LimitedInstance;
 import io.github.fungrim.blackan.injector.lookup.ObserverRegistry;
-import io.github.fungrim.blackan.injector.lookup.RecursionKey;
 import io.github.fungrim.blackan.injector.producer.ProducerRegistry;
 import io.github.fungrim.blackan.injector.util.SafeCallable;
 import jakarta.enterprise.context.BeforeDestroyed;
@@ -475,7 +475,7 @@ public class Context implements Closeable {
     public LimitedInstance getInstance(DotName type) {
         checkClosed();
         Arguments.notNull(type, "Type");
-        return instanceFactory.create(RecursionKey.of(type));
+        return instanceFactory.create(InjectionPointLookupKey.of(type));
     }
 
     /**
@@ -489,7 +489,7 @@ public class Context implements Closeable {
     public LimitedInstance getInstance(ClassInfo type) {
         checkClosed();
         Arguments.notNull(type, "Type");
-        return instanceFactory.create(RecursionKey.of(type));
+        return instanceFactory.create(InjectionPointLookupKey.of(type));
     }
 
     /**

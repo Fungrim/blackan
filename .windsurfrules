@@ -32,6 +32,7 @@ but never try to edit or create files outside of what is asked for.
 - All database entities should be named "Entity"
 - All services should be named "Service"
 - The Java root packages always starts with "io.github.fungrim.blackan"
+- Always prefer property injection over constructor injection
 
 # Project purpose
 

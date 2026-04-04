@@ -24,7 +24,6 @@ public class ContextSessionListener implements HttpSessionListener {
         var sessionScope = (Context) se.getSession().getAttribute(Constants.SESSION_SCOPE_KEY.toString());
         se.getSession().removeAttribute(Constants.SESSION_SCOPE_KEY.toString());
         if(sessionScope != null) {
-            log.info("Closing session context scope");
             sessionScope.close();
         }
     }

@@ -1,0 +1,25 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'org.kordamp.gradle.jandex' version '2.3.0'
+}
+
+dependencies {
+    api libs.hibernate.core
+    api libs.jakarta.data.api
+    api libs.smallrye.config
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            groupId = 'io.github.fungrim.blackan.extension'
+            artifactId = 'blackan-hibernate-extension-api'
+            version = "${semver.semver}"
+        }
+    }
+    repositories {
+        mavenLocal()
+    }
+}

@@ -1,6 +1,7 @@
 plugins {
     id 'java-library'
     id 'org.kordamp.gradle.jandex' version '2.3.0'
+    id 'maven-publish'
 }
 
 dependencies {
@@ -11,3 +12,16 @@ dependencies {
     implementation libs.logback.core
 }
 
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            groupId = 'io.github.fungrim.blackan.extension'
+            artifactId = 'blackan-slf4j-extension'
+            version = "${semver.semver}"
+        }
+    }
+    repositories {
+        mavenLocal()
+    }
+}

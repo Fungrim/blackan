@@ -10,7 +10,7 @@ import java.util.Optional;
 import io.github.fungrim.blackan.common.cdi.InjectionTarget;
 import io.github.fungrim.blackan.common.cdi.TargetType;
 import io.github.fungrim.blackan.injector.Context;
-import io.github.fungrim.blackan.injector.lookup.RecursionKey;
+import io.github.fungrim.blackan.injector.lookup.InjectionPointLookupKey;
 import jakarta.inject.Inject;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -46,19 +46,19 @@ public class ConstructorInvocation<T> {
         return Optional.empty();
     }
 
-    private static RecursionKey[] extractInjectionPoints(Constructor<?> constructor) {
-        RecursionKey[] keys = new RecursionKey[constructor.getParameterCount()];
+    private static InjectionPointLookupKey[] extractInjectionPoints(Constructor<?> constructor) {
+        InjectionPointLookupKey[] keys = new InjectionPointLookupKey[constructor.getParameterCount()];
         for (int i = 0; i < constructor.getParameterCount(); i++) {
             Class<?> parameterType = constructor.getParameterTypes()[i];
             Annotation[] annotations = constructor.getParameterAnnotations()[i];
-            keys[i] = RecursionKey.of(parameterType, annotations);
+            keys[i] = InjectionPointLookupKey.of(parameterType, annotations);
         }
         return keys;
     }
 
     private final Context context;
     private final Constructor<?> constructor;
-    private final RecursionKey[] parameters;
+    private final InjectionPointLookupKey[] parameters;
     private final Type[] genericTypes;
 
     @SuppressWarnings("unchecked")
@@ -66,7 +66,7 @@ public class ConstructorInvocation<T> {
         try {
             constructor.setAccessible(true);
             InjectionTarget[] targets = buildTargets(constructor);
-            T instance = (T) constructor.newInstance(InvocationUtil.resolveParameters(context, parameters, genericTypes, targets));
+            T instance = (T) constructor.newInstance(InjectionPointResolver.resolveParameters(context, parameters, genericTypes, targets));
             constructor.setAccessible(false);
             return instance;
         } catch (Exception e) {

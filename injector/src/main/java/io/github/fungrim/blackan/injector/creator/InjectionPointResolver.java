@@ -12,7 +12,7 @@ import io.github.fungrim.blackan.common.cdi.InjectionTarget;
 import io.github.fungrim.blackan.common.cdi.TargetAwareProvider;
 import io.github.fungrim.blackan.injector.Context;
 import io.github.fungrim.blackan.injector.lookup.EventInjectionPoint;
-import io.github.fungrim.blackan.injector.lookup.RecursionKey;
+import io.github.fungrim.blackan.injector.lookup.InjectionPointLookupKey;
 import io.github.fungrim.blackan.injector.producer.ProducerCacheKey;
 import io.github.fungrim.blackan.injector.producer.ProducerRegistry;
 import jakarta.enterprise.event.Event;
@@ -23,13 +23,13 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-public class InvocationUtil {
+public class InjectionPointResolver {
 
-    public static Object[] resolveParameters(Context context, RecursionKey[] parameters, Type[] genericTypes) {
+    public static Object[] resolveParameters(Context context, InjectionPointLookupKey[] parameters, Type[] genericTypes) {
         return resolveParameters(context, parameters, genericTypes, null);
     }
 
-    public static Object[] resolveParameters(Context context, RecursionKey[] parameters, Type[] genericTypes, InjectionTarget[] targets) {
+    public static Object[] resolveParameters(Context context, InjectionPointLookupKey[] parameters, Type[] genericTypes, InjectionTarget[] targets) {
         Object[] args = new Object[parameters.length];
         for (int i = 0; i < parameters.length; i++) {
             InjectionTarget target = targets != null ? targets[i] : null;
@@ -38,12 +38,12 @@ public class InvocationUtil {
         return args;
     }
 
-    public static Object resolveInjectionPoint(Context context, RecursionKey key, Type genericType) {
+    public static Object resolveInjectionPoint(Context context, InjectionPointLookupKey key, Type genericType) {
         return resolveInjectionPoint(context, key, genericType, null);
     }
 
     @SuppressWarnings("unchecked")
-    public static Object resolveInjectionPoint(Context context, RecursionKey key, Type genericType, InjectionTarget target) {
+    public static Object resolveInjectionPoint(Context context, InjectionPointLookupKey key, Type genericType, InjectionTarget target) {
         Class<?> rawType = rawClass(genericType);
         if (Instance.class.isAssignableFrom(rawType)) {
             Class<Object> typeArg = (Class<Object>) extractTypeArgument(genericType);
@@ -52,6 +52,17 @@ public class InvocationUtil {
         }
         if (Provider.class.isAssignableFrom(rawType)) {
             Class<Object> typeArg = (Class<Object>) extractTypeArgument(genericType);
+            
+            Annotation[] qualifiers = key.qualifiers().toArray(new Annotation[0]);
+            ProducerCacheKey producerKey = ProducerCacheKey.of(typeArg, qualifiers);
+            ProducerRegistry registry = context.producerRegistry();
+            if (registry != null) {
+                Optional<Provider<Object>> producer = registry.find(producerKey);
+                if (producer.isPresent()) {
+                    return producer.get();
+                }
+            }
+            
             DotName typeName = DotName.createSimple(typeArg);
             return new SubScopeProvider<>(context.scopeRegistry(), typeName, typeArg);
         }

@@ -8,7 +8,7 @@ public interface InstanceFactory {
 
     public <T> DecoratedInstance<T> decorate(T instance);
 
-    public LimitedInstance create(RecursionKey key);
+    public LimitedInstance create(InjectionPointLookupKey key);
 
     void evict(DotName type);
     

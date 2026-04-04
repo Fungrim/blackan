@@ -16,21 +16,20 @@ public class ContextRequestListener implements ServletRequestListener{
     public void requestInitialized(ServletRequestEvent sre) {
         var parentScope = (Context) sre.getServletContext().getAttribute(Constants.APPLICATION_SCOPE_KEY.toString());
         if(sre.getServletRequest() instanceof HttpServletRequest req && req.getSession(false) != null) {
-            log.info("Creating request context scope with parent session context");
+            log.debug("Creating request context scope with parent session context");
             parentScope = (Context) req.getSession().getAttribute(Constants.SESSION_SCOPE_KEY.toString());
         } else {
-            log.info("Creating request context scope with parent application context");
+            log.debug("Creating request context scope with parent application context");
         }
         sre.getServletRequest().setAttribute(Constants.REQUEST_SCOPE_KEY.toString(), parentScope.subcontext(Scope.REQUEST));
     }
 
     @Override
     public void requestDestroyed(ServletRequestEvent sre) {
-        log.info("Destroying request context scope");
+        log.debug("Destroying request context scope");
         var requestScope = (Context) sre.getServletRequest().getAttribute(Constants.REQUEST_SCOPE_KEY.toString());
         sre.getServletRequest().removeAttribute(Constants.REQUEST_SCOPE_KEY.toString());
         if(requestScope != null) {
-            log.info("Closing request context scope");
             requestScope.close();
         }
     }

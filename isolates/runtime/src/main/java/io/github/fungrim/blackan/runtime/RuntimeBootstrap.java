@@ -24,6 +24,8 @@ public class RuntimeBootstrap {
                 .withIndex(indexView)
                 .withCustomEventOrdering(new StageAndPriorityComparator())
                 .build();
+            logger.println("RuntimeBootstrap.context.producers: ");
+            context.producerRegistry().keys().forEach(k -> logger.println(" - " + k.toString()));
             new RuntimeController(context).run();
         } else {
             throw new IllegalStateException("RuntimeBootstrap.main: class loader is not an instance of RuntimeClassLoader: " + RuntimeBootstrap.class.getClassLoader().getClass().getName());

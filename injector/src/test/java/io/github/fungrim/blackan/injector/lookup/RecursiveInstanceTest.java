@@ -89,10 +89,10 @@ class RecursiveInstanceTest {
             }
         }
         Index localIndex = indexer.complete();
-        RecursionKey key = RecursionKey.of(keyClass);
+        InjectionPointLookupKey key = InjectionPointLookupKey.of(keyClass);
         InstanceFactory localFactory = new InstanceFactory() {
             @Override
-            public LimitedInstance create(RecursionKey k) {
+            public LimitedInstance create(InjectionPointLookupKey k) {
                 return new RecursiveInstance(k, CREATOR_FACTORY, this, localIndex, Set.of());
             }
             @Override public void evict(DotName t) {}

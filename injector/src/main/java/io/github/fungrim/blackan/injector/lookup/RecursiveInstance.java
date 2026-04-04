@@ -27,7 +27,7 @@ public class RecursiveInstance implements LimitedInstance {
     private static final DotName ALTERNATIVE = DotName.createSimple("jakarta.enterprise.inject.Alternative");
     private static final DotName PRIORITY = DotName.createSimple("jakarta.annotation.Priority");
 
-    private final RecursionKey key;
+    private final InjectionPointLookupKey key;
     private final Optional<ClassInfo> defaultCandidate;
     private final boolean ambiguous;
     private final ProviderFactory providerFactory;
@@ -35,7 +35,7 @@ public class RecursiveInstance implements LimitedInstance {
     private final IndexView index;
     private final Set<DotName> vetoedTypes;
 
-    public RecursiveInstance(RecursionKey key, ProviderFactory providerFactory, InstanceFactory instanceFactory, IndexView index, Set<DotName> vetoedTypes) {
+    public RecursiveInstance(InjectionPointLookupKey key, ProviderFactory providerFactory, InstanceFactory instanceFactory, IndexView index, Set<DotName> vetoedTypes) {
         this.key = key;
         this.providerFactory = providerFactory;
         this.instanceFactory = instanceFactory;
@@ -168,14 +168,14 @@ public class RecursiveInstance implements LimitedInstance {
 
     @Override
     public ClassInfo getCandidate() {
-        checkGet();
+        isSatisfied();
         if(defaultCandidate.isPresent()) {
             return defaultCandidate.get();
         }
         return select().getCandidate();
     }
 
-    private void checkGet() {
+    private void isSatisfied() {
         if(isUnsatisfied() ) {
             throw new UnsatisfiedResolutionException("No candidates found for: " + key);
         }
@@ -191,7 +191,7 @@ public class RecursiveInstance implements LimitedInstance {
 
     @Override
     public <T> Provider<T> toProvider(Class<T> type) {
-        checkGet();
+        isSatisfied();
         if(defaultCandidate.isPresent()) {
             return providerFactory.create(defaultCandidate.get(), type);
         }
@@ -206,7 +206,7 @@ public class RecursiveInstance implements LimitedInstance {
     public <U> LimitedInstance selectSubtype(Class<U> subtype, Annotation... qualifiers) {
         List<Annotation> combined = new ArrayList<>(key.qualifiers());
         combined.addAll(qualifiers == null ? List.of() : List.of(qualifiers));
-        RecursionKey narrowedKey = RecursionKey.of(subtype, combined.toArray(new Annotation[0]));
+        InjectionPointLookupKey narrowedKey = InjectionPointLookupKey.of(subtype, combined.toArray(new Annotation[0]));
         return instanceFactory.create(narrowedKey);
     }
 
@@ -214,7 +214,7 @@ public class RecursiveInstance implements LimitedInstance {
     public LimitedInstance select(Annotation... qualifiers) {
         List<Annotation> combined = new ArrayList<>(key.qualifiers());
         combined.addAll(qualifiers == null ? List.of() : List.of(qualifiers));
-        RecursionKey narrowedKey = RecursionKey.of(key.type(), combined.toArray(new Annotation[0]));
+        InjectionPointLookupKey narrowedKey = InjectionPointLookupKey.of(key.type(), combined.toArray(new Annotation[0]));
         return instanceFactory.create(narrowedKey);
     }
     

@@ -12,7 +12,7 @@ import java.util.Objects;
 import io.github.fungrim.blackan.common.cdi.InjectionTarget;
 import io.github.fungrim.blackan.common.cdi.TargetType;
 import io.github.fungrim.blackan.injector.Context;
-import io.github.fungrim.blackan.injector.lookup.RecursionKey;
+import io.github.fungrim.blackan.injector.lookup.InjectionPointLookupKey;
 import jakarta.inject.Inject;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -23,7 +23,7 @@ public class MethodInvocation {
     private final Context context;
     private final Object object;
     private final Method method;
-    private final RecursionKey[] parameters;
+    private final InjectionPointLookupKey[] parameters;
     private final Type[] genericTypes;
 
     public static List<MethodInvocation> of(Context context, Object object) {
@@ -40,12 +40,12 @@ public class MethodInvocation {
         return new MethodInvocation(context, object, method, extractInjectionPoints(method), method.getGenericParameterTypes());
     }
 
-    private static RecursionKey[] extractInjectionPoints(Method method) {
-        RecursionKey[] keys = new RecursionKey[method.getParameterCount()];
+    private static InjectionPointLookupKey[] extractInjectionPoints(Method method) {
+        InjectionPointLookupKey[] keys = new InjectionPointLookupKey[method.getParameterCount()];
         for (int i = 0; i < method.getParameterCount(); i++) {
             Class<?> parameterType = method.getParameterTypes()[i];
             Annotation[] annotations = method.getParameterAnnotations()[i];
-            keys[i] = RecursionKey.of(parameterType, annotations);
+            keys[i] = InjectionPointLookupKey.of(parameterType, annotations);
         }
         return keys;
     }
@@ -54,7 +54,7 @@ public class MethodInvocation {
         try {
             method.setAccessible(true);
             InjectionTarget[] targets = buildTargets(method);
-            method.invoke(object, InvocationUtil.resolveParameters(context, parameters, genericTypes, targets));
+            method.invoke(object, InjectionPointResolver.resolveParameters(context, parameters, genericTypes, targets));
             method.setAccessible(false);
         } catch (Exception e) {
             throw new ConstructionException("Failed to invoke method " + method.getName() + (Objects.isNull(object) ? "" : " on " + object.getClass().getName()), e);

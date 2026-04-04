@@ -8,7 +8,7 @@ repositories {
 }
 
 configurations {
-    boot {
+    blackanBoot {
         transitive = true
         canBeResolved = true
         canBeConsumed = false
@@ -21,10 +21,10 @@ configurations {
 }
 
 dependencies {
-    boot project(':isolates:bootstrap')
+    blackanBoot project(':isolates:bootstrap')
     blackanRuntime project(':isolates:runtime')
-    blackanRuntime project(':extensions:bootstrap:slf4j')
-    blackanRuntime project(':extensions:bootstrap:smallrye-config')
+    blackanRuntime project(':extensions:bootstrap:slf4j:implementation')
+    blackanRuntime project(':extensions:bootstrap:smallrye-config:implementation')
     implementation libs.jandex
     // test classes
     testImplementation libs.junit.jupiter
@@ -62,8 +62,8 @@ def collectGavs = { config ->
 
 tasks.register('generateAppLibsToml') {
     def outDir = generatedResourcesDir
-    def bootGavs = collectGavs(configurations.boot)
-    def runtimeGavs = collectGavs(configurations.blackanRuntime)
+    def bootGavs = provider { collectGavs(configurations.blackanBoot) }
+    def runtimeGavs = provider { collectGavs(configurations.blackanRuntime) }
     inputs.property('bootGavs', bootGavs)
     inputs.property('runtimeGavs', runtimeGavs)
     outputs.dir(outDir)
@@ -72,12 +72,12 @@ tasks.register('generateAppLibsToml') {
     doLast {
         def toml = new StringBuilder()
         toml.append('[boot]\n')
-        bootGavs.each { gav ->
+        bootGavs.get().each { gav ->
             def name = gav.split(':')[1]
             toml.append("${name} = \"${gav}\"\n")
         }
         toml.append('\n[runtime]\n')
-        runtimeGavs.each { gav ->
+        runtimeGavs.get().each { gav ->
             def name = gav.split(':')[1]
             toml.append("${name} = \"${gav}\"\n")
         }

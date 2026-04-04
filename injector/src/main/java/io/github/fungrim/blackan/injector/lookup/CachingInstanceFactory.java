@@ -18,7 +18,7 @@ public class CachingInstanceFactory implements InstanceFactory{
     private final IndexView index;
     private final Set<DotName> vetoedTypes;
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
-    private final Map<RecursionKey, RecursiveInstance> cache = new HashMap<>();
+    private final Map<InjectionPointLookupKey, RecursiveInstance> cache = new HashMap<>();
 
     public CachingInstanceFactory(ProviderFactory creatorFactory, IndexView index, Set<DotName> vetoedTypes) {
         this.creatorFactory = creatorFactory;
@@ -27,7 +27,7 @@ public class CachingInstanceFactory implements InstanceFactory{
     }
 
     @Override
-    public LimitedInstance create(RecursionKey key) {
+    public LimitedInstance create(InjectionPointLookupKey key) {
         lock.writeLock().lock();
         try {
             return cache.computeIfAbsent(key, k -> new RecursiveInstance(key, creatorFactory, this, index, vetoedTypes));

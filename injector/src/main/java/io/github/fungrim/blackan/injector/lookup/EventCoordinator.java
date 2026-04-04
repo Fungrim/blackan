@@ -16,7 +16,7 @@ import org.jboss.jandex.DotName;
 import io.github.fungrim.blackan.common.cdi.ObserverMethod;
 import io.github.fungrim.blackan.injector.Context;
 import io.github.fungrim.blackan.injector.creator.ConstructionException;
-import io.github.fungrim.blackan.injector.creator.InvocationUtil;
+import io.github.fungrim.blackan.injector.creator.InjectionPointResolver;
 import io.github.fungrim.blackan.injector.util.Jandex;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -61,8 +61,8 @@ public class EventCoordinator {
             for (int i = 1; i < count; i++) {
                 Class<?> paramType = method.getParameterTypes()[i];
                 Annotation[] annotations = method.getParameterAnnotations()[i];
-                RecursionKey key = RecursionKey.of(paramType, annotations);
-                args[i] = InvocationUtil.resolveInjectionPoint(context, key, genericTypes[i]);
+                InjectionPointLookupKey key = InjectionPointLookupKey.of(paramType, annotations);
+                args[i] = InjectionPointResolver.resolveInjectionPoint(context, key, genericTypes[i]);
             }
         }
         return args;

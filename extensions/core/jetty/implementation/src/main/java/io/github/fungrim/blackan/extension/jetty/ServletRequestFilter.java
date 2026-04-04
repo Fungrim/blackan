@@ -18,9 +18,10 @@ public class ServletRequestFilter implements Filter {
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         var requestScope = (Context) request.getAttribute(Constants.REQUEST_SCOPE_KEY.toString());
-        log.info("Entering request context scope");
         ServletScopedContext.enter(requestScope, () -> {
+            log.debug("Request context scope entered");
             chain.doFilter(request, response);
         });
+        log.debug("Request context scope exited");
     }
 }

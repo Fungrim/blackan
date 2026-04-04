@@ -1,23 +1,19 @@
 package io.github.fungrim.blackan.injector.producer;
 
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 
 import jakarta.enterprise.inject.Any;
 import jakarta.enterprise.inject.Default;
-import jakarta.enterprise.util.Nonbinding;
 import jakarta.inject.Named;
 
 public record ProducerCacheKey(
     Class<?> rawType,
     List<Type> typeArguments,
-    List<String> qualifierNames) {
+    List<QualifierIdentity> qualifiers) {
 
     public static ProducerCacheKey of(Type returnType, Annotation[] annotations) {
         Class<?> raw;
@@ -31,71 +27,53 @@ public record ProducerCacheKey(
         } else {
             throw new IllegalArgumentException("Unsupported return type: " + returnType);
         }
-        List<String> qualifiers = normalizeQualifiers(annotations);
+        List<QualifierIdentity> qualifiers = normalizeQualifiers(annotations);
         return new ProducerCacheKey(raw, typeArgs, qualifiers);
     }
 
-    private static List<String> normalizeQualifiers(Annotation[] annotations) {
+    private static List<QualifierIdentity> normalizeQualifiers(Annotation[] annotations) {
         List<Annotation> rawQualifiers = Arrays.stream(annotations)
                 .filter(a -> a.annotationType().isAnnotationPresent(jakarta.inject.Qualifier.class))
                 .toList();
         
         boolean hasCustomQualifier = rawQualifiers.stream()
-                .anyMatch(a -> !isBuiltInQualifier(a));
+                .anyMatch(a -> !isPredefinedQualifier(a));
         boolean hasAny = rawQualifiers.stream()
                 .anyMatch(a -> a.annotationType() == Any.class);
         boolean hasDefault = rawQualifiers.stream()
                 .anyMatch(a -> a.annotationType() == Default.class);
         
-        List<String> result = new java.util.ArrayList<>(rawQualifiers.stream()
-                .map(ProducerCacheKey::qualifierIdentity)
+        List<QualifierIdentity> result = new java.util.ArrayList<>(rawQualifiers.stream()
+                .map(QualifierIdentity::of)
                 .toList());
         
         if (!hasAny && !hasDefault && !hasCustomQualifier) {
-            result.add(qualifierIdentity(Default.Literal.INSTANCE));
+            result.add(QualifierIdentity.of(Default.Literal.INSTANCE));
         }
         
-        result.sort(String::compareTo);
         return result;
     }
 
-    private static boolean isBuiltInQualifier(Annotation a) {
+    private static boolean isPredefinedQualifier(Annotation a) {
         Class<?> type = a.annotationType();
-        return type == Default.class || type == Any.class || type == Named.class;
+        return type == Default.class 
+            || type == Any.class 
+            || type == Named.class;
     }
 
-    private static String qualifierIdentity(Annotation annotation) {
-        Method[] methods = annotation.annotationType().getDeclaredMethods();
-        Arrays.sort(methods, Comparator.comparing(Method::getName));
-        StringBuilder sb = new StringBuilder("@").append(annotation.annotationType().getName()).append("(");
-        boolean first = true;
-        for (Method m : methods) {
-            if (m.isAnnotationPresent(Nonbinding.class)) {
-                continue;
-            }
-            if (!first) sb.append(", ");
-            try {
-                sb.append(m.getName()).append("=").append(m.invoke(annotation));
-            } catch (ReflectiveOperationException e) {
-                throw new IllegalStateException("Failed to read qualifier attribute: " + m.getName(), e);
-            }
-            first = false;
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(rawType.getSimpleName());
+        if (typeArguments != null && !typeArguments.isEmpty()) {
+            sb.append(" <");
+            sb.append(typeArguments.stream().map(Type::getTypeName).collect(java.util.stream.Collectors.joining(", ")));
+            sb.append(">");
         }
-        sb.append(")");
+        if (qualifiers != null && !qualifiers.isEmpty()) {
+            sb.append(" | ");
+            sb.append(qualifiers.stream().map(QualifierIdentity::toString).collect(java.util.stream.Collectors.joining(", ")));
+        }
         return sb.toString();
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof ProducerCacheKey other)) return false;
-        return rawType.equals(other.rawType)
-                && typeArguments.equals(other.typeArguments)
-                && qualifierNames.equals(other.qualifierNames);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(rawType, typeArguments, qualifierNames);
     }
 }

@@ -11,6 +11,7 @@ subprojects {
         }
 
         dependencies {
+            implementation libs.slf4j.api
             compileOnly libs.lombok
             annotationProcessor libs.lombok
             testCompileOnly libs.lombok
@@ -23,21 +24,6 @@ subprojects {
 
         tasks.named('test', Test) {
             useJUnitPlatform()
-        }
-    }
-
-    plugins.withId('maven-publish') {
-        publishing {
-            publications {
-                mavenJava(MavenPublication) {
-                    from components.java
-                    groupId = 'io.github.fungrim.blackan.extension'
-                    version = "${semver.semver}"
-                }
-            }
-            repositories {
-                mavenLocal()
-            }
         }
     }
 }

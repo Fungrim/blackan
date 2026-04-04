@@ -13,6 +13,9 @@ smallrye-config = "3.9.1"
 jetty = "12.1.7"
 servlet-api = "6.1.0"
 jackson = "3.1.0"
+hibernate = "7.0.0.Final"
+jakarta-data = "1.0.1"
+mysql-connector = "9.1.0"
 
 [libraries]
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
@@ -32,3 +35,6 @@ jetty-servlet = { module = "org.eclipse.jetty.ee10:jetty-ee10-servlet", version.
 jetty-cdi = { module = "org.eclipse.jetty.ee10:jetty-ee10-cdi", version.ref = "jetty" }
 servlet-api = { module = "jakarta.servlet:jakarta.servlet-api", version.ref = "servlet-api" }
 jackson-databind = { module = "tools.jackson.core:jackson-databind", version.ref = "jackson" }
+hibernate-core = { module = "org.hibernate.orm:hibernate-core", version.ref = "hibernate" }
+jakarta-data-api = { module = "jakarta.data:jakarta.data-api", version.ref = "jakarta-data" }
+mysql-connector = { module = "com.mysql:mysql-connector-j", version.ref = "mysql-connector" }

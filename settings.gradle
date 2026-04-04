@@ -17,4 +17,6 @@ include(
     'extensions:core:jetty:api',
     'extensions:core:jetty:implementation',
     'extensions:core:jackson:api',
-    'extensions:core:jackson:implementation')
+    'extensions:core:jackson:implementation',
+    'extensions:core:hibernate:api',
+    'extensions:core:hibernate:implementation')

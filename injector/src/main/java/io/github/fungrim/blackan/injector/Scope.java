@@ -3,6 +3,7 @@ package io.github.fungrim.blackan.injector;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -11,6 +12,7 @@ import org.jboss.jandex.AnnotationTarget;
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.DotName;
 
+import io.github.fungrim.blackan.common.api.Extension;
 import io.github.fungrim.blackan.injector.creator.ConstructionException;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.context.Dependent;
@@ -40,6 +42,9 @@ public enum Scope {
             .map(Optional::get)
             .toList();
         if(scopes.isEmpty()) {
+            if(clazz.hasAnnotation(DotName.createSimple(Extension.class))) {
+                return Optional.of(APPLICATION);
+            }
             return Optional.empty();
         } else if(scopes.size() > 1) {
             throw new ConstructionException("Multiple scopes found for: " + clazz.name());
@@ -65,7 +70,16 @@ public enum Scope {
     }
 
     public static Optional<Scope> of(Class<?> clazz) {
-        return from(findScope(clazz.getAnnotations(), clazz.getName()).orElse(Dependent.Literal.INSTANCE));
+        Optional<Annotation> scopeAnnotation = findScope(clazz.getAnnotations(), clazz.getName());
+        if(scopeAnnotation.isEmpty() && isExtension(clazz)) {
+            return Optional.of(APPLICATION);
+        }
+        return from(scopeAnnotation.orElse(Dependent.Literal.INSTANCE));
+    }
+    
+    private static boolean isExtension(Class<?> clazz) {
+        return Arrays.stream(clazz.getAnnotations())
+                .anyMatch(a -> a.annotationType().equals(Extension.class));
     }
 
     public static Optional<Scope> of(Field field) {

@@ -1,8 +1,11 @@
 package io.github.fungrim.blackan.extension.jetty;
 
+import java.util.EnumSet;
+
 import io.github.fungrim.blackan.injector.Context;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +32,8 @@ public class ContextServletListener implements ServletContextListener {
         sce.getServletContext().setAttribute(Constants.APPLICATION_SCOPE_KEY.toString(), context);
         sce.getServletContext().addListener(contextRequestListener);
         sce.getServletContext().addListener(contextSessionListener);
-        sce.getServletContext().addFilter("blackanRequestFilter", servletRequestFilter);
+        sce.getServletContext().addFilter("blackanRequestFilter", servletRequestFilter)
+            .addMappingForUrlPatterns(EnumSet.of(DispatcherType.REQUEST), false, "/*");
     }
 
     

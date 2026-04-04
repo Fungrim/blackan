@@ -17,4 +17,6 @@
 
   <logger name="io.github.fungrim.blackan" level="debug"/>
   <logger name="org.eclipse.jetty" level="info"/>
+  <logger name="org.hibernate" level="info"/>
+  
 </configuration>

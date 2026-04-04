@@ -13,6 +13,8 @@ dependencies {
     implementation libs.slf4j.api
     implementation "io.github.fungrim.blackan.extension:blackan-jetty-extension:0.0.2-SNAPSHOT"
     implementation "io.github.fungrim.blackan.extension:blackan-jackson-extension:0.0.2-SNAPSHOT"
+    implementation "io.github.fungrim.blackan.extension:blackan-hibernate-extension:0.0.2-SNAPSHOT"
+    implementation "com.mysql:mysql-connector-j:9.1.0"
     // test classes
     testImplementation libs.junit.jupiter
     testImplementation libs.mockito
@@ -26,7 +28,7 @@ dependencies {
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(25)
     }
 }
 

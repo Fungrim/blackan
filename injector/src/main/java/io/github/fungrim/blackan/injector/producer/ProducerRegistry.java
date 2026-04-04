@@ -6,6 +6,7 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.jboss.jandex.MethodInfo;
@@ -64,6 +65,10 @@ public class ProducerRegistry {
             return pt.getActualTypeArguments()[0];
         }
         return type;
+    }
+
+    public Set<ProducerCacheKey> keys() {
+        return producers.keySet();
     }
     
     public void close() {
