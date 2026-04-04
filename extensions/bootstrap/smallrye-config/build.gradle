@@ -37,9 +37,10 @@ tasks.named('test', Test) {
 
 publishing {
     publications {
-        slf4j(MavenPublication) {
+        smallryeConfig(MavenPublication) {
             from components.java
             groupId = 'io.github.fungrim.blackan.extension'
+            artifactId = 'blackan-smallrye-config-extension'
             version = "${semver.semver}"
         }
     }

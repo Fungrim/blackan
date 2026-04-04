@@ -39,9 +39,10 @@ tasks.named('test', Test) {
 
 publishing {
     publications {
-        slf4j(MavenPublication) {
+        jackson(MavenPublication) {
             from components.java
             groupId = 'io.github.fungrim.blackan.extension'
+            artifactId = 'blackan-jackson-extension'
             version = "${semver.semver}"
         }
     }

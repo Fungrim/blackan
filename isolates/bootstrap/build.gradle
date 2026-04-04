@@ -35,6 +35,7 @@ publishing {
         bootstrap(MavenPublication) {
             from components.java
             groupId = 'io.github.fungrim.blackan.isolates'
+            artifactId = 'blackan-bootstrap'
             version = "${semver.semver}"
         }
     }

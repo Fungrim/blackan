@@ -18,4 +18,4 @@ cdi-spec = { module = "jakarta.enterprise:jakarta.enterprise.cdi-api", version.r
 validation-api = { module = "jakarta.validation:jakarta.validation-api", version.ref = "validation-api" }
 mockito = { module = "org.mockito:mockito-core", version.ref = "mockito" }
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j-api" }
-common = { module = "io.github.fungrim.blackan:common", version.ref = "common" }
+common = { module = "io.github.fungrim.blackan:blackan-common", version.ref = "common" }

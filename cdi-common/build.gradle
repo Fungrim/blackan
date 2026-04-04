@@ -36,6 +36,7 @@ publishing {
         cdiCommon(MavenPublication) {
             from components.java
             groupId = 'io.github.fungrim.blackan'
+            artifactId = 'blackan-cdi-common'
             version = "${semver.semver}"
         }
     }

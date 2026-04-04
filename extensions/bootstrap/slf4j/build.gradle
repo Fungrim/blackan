@@ -40,6 +40,7 @@ publishing {
         slf4j(MavenPublication) {
             from components.java
             groupId = 'io.github.fungrim.blackan.extension'
+            artifactId = 'blackan-slf4j-extension'
             version = "${semver.semver}"
         }
     }

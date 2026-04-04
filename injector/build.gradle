@@ -41,6 +41,7 @@ publishing {
         common(MavenPublication) {
             from components.java
             groupId = 'io.github.fungrim.blackan'
+            artifactId = 'blackan-injector'
             version = "${semver.semver}"
         }
     }
