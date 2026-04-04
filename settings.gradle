@@ -10,7 +10,11 @@ include(
     'isolates:bootstrap', 
     'isolates:runtime', 
     'plugins:gradle', 
-    'extensions:bootstrap:slf4j',
-    'extensions:bootstrap:smallrye-config',
-    'extensions:core:jetty',
-    'extensions:core:jackson')
+    'extensions:bootstrap:slf4j:api',
+    'extensions:bootstrap:slf4j:implementation',
+    'extensions:bootstrap:smallrye-config:api',
+    'extensions:bootstrap:smallrye-config:implementation',
+    'extensions:core:jetty:api',
+    'extensions:core:jetty:implementation',
+    'extensions:core:jackson:api',
+    'extensions:core:jackson:implementation')

@@ -1,0 +1,16 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+}
+
+dependencies {
+    api libs.jackson.databind
+}
+
+publishing {
+    publications {
+        mavenJava {
+            artifactId = 'blackan-jackson-extension-api'
+        }
+    }
+}

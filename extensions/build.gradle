@@ -1,1 +1,43 @@
+subprojects {
+    repositories {
+        mavenCentral()
+    }
 
+    plugins.withType(JavaPlugin) {
+        java {
+            toolchain {
+                languageVersion = JavaLanguageVersion.of(25)
+            }
+        }
+
+        dependencies {
+            compileOnly libs.lombok
+            annotationProcessor libs.lombok
+            testCompileOnly libs.lombok
+            testAnnotationProcessor libs.lombok
+            testImplementation libs.junit.jupiter
+            testImplementation libs.mockito
+            testImplementation libs.jandex
+            testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+        }
+
+        tasks.named('test', Test) {
+            useJUnitPlatform()
+        }
+    }
+
+    plugins.withId('maven-publish') {
+        publishing {
+            publications {
+                mavenJava(MavenPublication) {
+                    from components.java
+                    groupId = 'io.github.fungrim.blackan.extension'
+                    version = "${semver.semver}"
+                }
+            }
+            repositories {
+                mavenLocal()
+            }
+        }
+    }
+}

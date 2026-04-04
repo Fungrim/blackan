@@ -1,0 +1,16 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+}
+
+dependencies {
+    api libs.servlet.api
+}
+
+publishing {
+    publications {
+        mavenJava {
+            artifactId = 'blackan-jetty-extension-api'
+        }
+    }
+}

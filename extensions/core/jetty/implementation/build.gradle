@@ -1,0 +1,17 @@
+plugins {
+    id 'java-library'
+    id 'org.kordamp.gradle.jandex' version '2.3.0'
+}
+
+dependencies {
+    api project(':extensions:core:jetty:api')
+    implementation project(':common')
+    implementation project(':cdi-common')
+    implementation project(':injector')
+    implementation project(':extensions:bootstrap:smallrye-config:implementation')
+    implementation libs.jetty
+    implementation libs.jetty.servlet
+    implementation libs.jetty.cdi
+    testImplementation project(':injector')
+}
+
