@@ -1,0 +1,32 @@
+plugins {
+    id 'java-library'
+    id 'org.kordamp.gradle.jandex' version '2.3.0'
+    id 'maven-publish'
+}
+
+dependencies {
+    api project(':extensions:core:grcp:api')
+    implementation project(':common')
+    implementation project(':cdi-common')
+    implementation project(':injector')
+    implementation project(':extensions:bootstrap:smallrye-config:implementation')
+    implementation libs.grpc.netty.shaded
+    implementation libs.grpc.stub
+    implementation libs.grpc.protobuf
+    implementation libs.grpc.core
+    testImplementation project(':injector')
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            groupId = 'io.github.fungrim.blackan.extension'
+            artifactId = 'blackan-grcp-extension'
+            version = "${semver.semver}"
+        }
+    }
+    repositories {
+        mavenLocal()
+    }
+}

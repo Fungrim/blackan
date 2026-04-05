@@ -9,12 +9,12 @@ repositories {
 }
 
 dependencies {
-    implementation libs.common
-    implementation libs.slf4j.api
     implementation "io.github.fungrim.blackan.extension:blackan-jetty-extension:0.0.2-SNAPSHOT"
     implementation "io.github.fungrim.blackan.extension:blackan-jackson-extension:0.0.2-SNAPSHOT"
     implementation "io.github.fungrim.blackan.extension:blackan-hibernate-extension:0.0.2-SNAPSHOT"
     implementation "com.mysql:mysql-connector-j:9.1.0"
+    implementation libs.common
+    implementation libs.slf4j.api
     // test classes
     testImplementation libs.junit.jupiter
     testImplementation libs.mockito

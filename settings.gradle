@@ -21,4 +21,6 @@ include(
     'extensions:core:jackson:api',
     'extensions:core:jackson:implementation',
     'extensions:core:hibernate:api',
-    'extensions:core:hibernate:implementation')
+    'extensions:core:hibernate:implementation',
+    'extensions:core:grcp:api',
+    'extensions:core:grcp:implementation')

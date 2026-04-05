@@ -1,0 +1,56 @@
+plugins {
+    id 'java-library'
+    id 'com.google.protobuf' version '0.9.4'
+    id 'io.fungrim.github.blackan.gradle' version '0.0.2-SNAPSHOT'
+}
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+dependencies {
+    implementation "io.github.fungrim.blackan.extension:blackan-grcp-extension:0.0.2-SNAPSHOT"
+    implementation libs.common
+    implementation libs.slf4j.api
+    implementation libs.grpc.netty.shaded
+    implementation libs.grpc.stub
+    implementation libs.grpc.protobuf
+    implementation libs.grpc.core
+    implementation libs.javax.annotation.api
+    // test classes
+    testImplementation libs.junit.jupiter
+    testImplementation libs.mockito
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    // lombok
+    compileOnly libs.lombok
+    annotationProcessor libs.lombok
+    testCompileOnly libs.lombok
+    testAnnotationProcessor libs.lombok
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
+}
+
+protobuf {
+    protoc {
+        artifact = 'com.google.protobuf:protoc:3.25.1'
+    }
+    plugins {
+        grpc {
+            artifact = 'io.grpc:protoc-gen-grpc-java:1.60.0'
+        }
+    }
+    generateProtoTasks {
+        all()*.plugins {
+            grpc {}
+        }
+    }
+}

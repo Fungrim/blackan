@@ -18,6 +18,7 @@ jakarta-data = "1.0.1"
 mysql-connector = "9.1.0"
 java-grok = "0.1.1"
 h2 = "2.3.232"
+grpc = "1.80.0"
 
 [libraries]
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
@@ -42,3 +43,8 @@ jakarta-data-api = { module = "jakarta.data:jakarta.data-api", version.ref = "ja
 mysql-connector = { module = "com.mysql:mysql-connector-j", version.ref = "mysql-connector" }
 java-grok = { module = "io.github.whatap:java-grok", version.ref = "java-grok" }
 h2 = { module = "com.h2database:h2", version.ref = "h2" }
+grpc-api = { module = "io.grpc:grpc-api", version.ref = "grpc" }
+grpc-netty-shaded = { module = "io.grpc:grpc-netty-shaded", version.ref = "grpc" }
+grpc-stub = { module = "io.grpc:grpc-stub", version.ref = "grpc" }
+grpc-protobuf = { module = "io.grpc:grpc-protobuf", version.ref = "grpc" }
+grpc-core = { module = "io.grpc:grpc-core", version.ref = "grpc" }
