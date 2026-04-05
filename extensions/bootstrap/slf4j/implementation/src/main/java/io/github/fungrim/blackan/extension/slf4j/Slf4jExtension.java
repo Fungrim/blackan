@@ -26,7 +26,7 @@ public class Slf4jExtension {
 
     @Produces
     TargetAwareProvider<Logger> getLogger() {
-        return (target) -> {
+        return (target, isOptional) -> {
             return LoggerFactory.getLogger(target.parentClass());
         };
     }

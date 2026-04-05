@@ -17,7 +17,7 @@ import io.github.fungrim.blackan.common.api.Stage;
 import io.github.fungrim.blackan.common.cdi.AfterBeanDiscovery;
 import io.github.fungrim.blackan.common.cdi.AfterDeploymentValidation;
 import io.github.fungrim.blackan.common.cdi.ContainerExtension;
-import io.github.fungrim.blackan.common.cdi.InjectionTarget;
+import io.github.fungrim.blackan.common.cdi.InjectionPoint;
 import io.github.fungrim.blackan.common.cdi.ProcessAnnotatedType;
 import io.github.fungrim.blackan.common.cdi.TargetAwareProvider;
 import io.smallrye.config.ConfigMapping;
@@ -115,47 +115,47 @@ public class SmallRyeConfigExtension implements ContainerExtension {
     @ApplicationScoped
     @ConfigProperty
     public TargetAwareProvider<ConfigValue> produceConfigValueProperty(SmallRyeConfig config) {
-        return target -> config.getConfigValue(resolvePropertyName(target));
+        return (target, isOptional) -> config.getConfigValue(resolvePropertyName(target));
     }
 
     @Produces
     @ApplicationScoped
     @ConfigProperty
     public TargetAwareProvider<String> produceStringConfigProperty(SmallRyeConfig config) {
-        return target -> getConfigValue(target, config, String.class);
+        return (target, isOptional) -> getConfigValue(target, config, String.class);
     }
 
     @Produces
     @ApplicationScoped
     @ConfigProperty
     public TargetAwareProvider<Integer> produceIntegerConfigProperty(SmallRyeConfig config) {
-        return target -> getConfigValue(target, config, Integer.class);
+        return (target, isOptional) -> getConfigValue(target, config, Integer.class);
     }
 
     @Produces
     @ApplicationScoped
     @ConfigProperty
     public TargetAwareProvider<Long> produceLongConfigProperty(SmallRyeConfig config) {
-        return target -> getConfigValue(target, config, Long.class);
+        return (target, isOptional) -> getConfigValue(target, config, Long.class);
     }
 
     @Produces
     @ApplicationScoped
     @ConfigProperty
     public TargetAwareProvider<Boolean> produceBooleanConfigProperty(SmallRyeConfig config) {
-        return target -> getConfigValue(target, config, Boolean.class);
+        return (target, isOptional) -> getConfigValue(target, config, Boolean.class);
     }
 
     @Produces
     @ApplicationScoped
     @ConfigProperty
     public TargetAwareProvider<Double> produceDoubleConfigProperty(SmallRyeConfig config) {
-        return target -> getConfigValue(target, config, Double.class);
+        return (target, isOptional) -> getConfigValue(target, config, Double.class);
     }
 
     // --- Helpers ---
 
-    private static <T> T getConfigValue(InjectionTarget target, SmallRyeConfig config, Class<T> type) {
+    private static <T> T getConfigValue(InjectionPoint target, SmallRyeConfig config, Class<T> type) {
         String name = resolvePropertyName(target);
         String defaultValue = resolveDefaultValue(target);
         if (defaultValue != null) {
@@ -164,7 +164,7 @@ public class SmallRyeConfigExtension implements ContainerExtension {
         return config.getValue(name, type);
     }
 
-    private static String resolvePropertyName(InjectionTarget target) {
+    private static String resolvePropertyName(InjectionPoint target) {
         for (Annotation a : target.qualifiers()) {
             if (a instanceof ConfigProperty cp && !cp.name().isEmpty()) {
                 return cp.name();
@@ -173,7 +173,7 @@ public class SmallRyeConfigExtension implements ContainerExtension {
         return target.targetName();
     }
 
-    private static String resolveDefaultValue(InjectionTarget target) {
+    private static String resolveDefaultValue(InjectionPoint target) {
         for (Annotation a : target.qualifiers()) {
             if (a instanceof ConfigProperty cp) {
                 String dv = cp.defaultValue();

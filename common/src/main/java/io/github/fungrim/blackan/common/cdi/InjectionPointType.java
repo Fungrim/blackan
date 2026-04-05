@@ -1,6 +1,6 @@
 package io.github.fungrim.blackan.common.cdi;
 
-public enum TargetType {
+public enum InjectionPointType {
     FIELD,
     METHOD,
     CONSTRUCTOR

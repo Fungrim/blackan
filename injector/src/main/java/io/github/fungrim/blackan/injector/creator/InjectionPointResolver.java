@@ -8,13 +8,15 @@ import java.util.Optional;
 
 import org.jboss.jandex.DotName;
 
-import io.github.fungrim.blackan.common.cdi.InjectionTarget;
+import io.github.fungrim.blackan.common.cdi.InjectionPoint;
 import io.github.fungrim.blackan.common.cdi.TargetAwareProvider;
 import io.github.fungrim.blackan.injector.Context;
 import io.github.fungrim.blackan.injector.lookup.EventInjectionPoint;
 import io.github.fungrim.blackan.injector.lookup.InjectionPointLookupKey;
+import io.github.fungrim.blackan.injector.lookup.LimitedInstance;
 import io.github.fungrim.blackan.injector.producer.ProducerCacheKey;
 import io.github.fungrim.blackan.injector.producer.ProducerRegistry;
+import jakarta.annotation.Nullable;
 import jakarta.enterprise.event.Event;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Provider;
@@ -29,10 +31,10 @@ public class InjectionPointResolver {
         return resolveParameters(context, parameters, genericTypes, null);
     }
 
-    public static Object[] resolveParameters(Context context, InjectionPointLookupKey[] parameters, Type[] genericTypes, InjectionTarget[] targets) {
+    public static Object[] resolveParameters(Context context, InjectionPointLookupKey[] parameters, Type[] genericTypes, InjectionPoint[] targets) {
         Object[] args = new Object[parameters.length];
         for (int i = 0; i < parameters.length; i++) {
-            InjectionTarget target = targets != null ? targets[i] : null;
+            InjectionPoint target = targets != null ? targets[i] : null;
             args[i] = resolveInjectionPoint(context, parameters[i], genericTypes[i], target);
         }
         return args;
@@ -43,7 +45,7 @@ public class InjectionPointResolver {
     }
 
     @SuppressWarnings("unchecked")
-    public static Object resolveInjectionPoint(Context context, InjectionPointLookupKey key, Type genericType, InjectionTarget target) {
+    public static Object resolveInjectionPoint(Context context, InjectionPointLookupKey key, Type genericType, InjectionPoint target) {
         Class<?> rawType = rawClass(genericType);
         if (Instance.class.isAssignableFrom(rawType)) {
             Class<Object> typeArg = (Class<Object>) extractTypeArgument(genericType);
@@ -77,18 +79,55 @@ public class InjectionPointResolver {
                 throw new ConstructionException("Injection of Context is disallowed outside of extensions");
             }
         }
+        if (Optional.class.isAssignableFrom(rawType)) {
+            Class<Object> typeArg = (Class<Object>) extractTypeArgument(genericType);
+            
+            Annotation[] qualifiers = key.qualifiers().toArray(new Annotation[0]);
+            ProducerCacheKey producerKey = ProducerCacheKey.of(typeArg, qualifiers);
+            ProducerRegistry registry = context.producerRegistry();
+            
+            if (registry != null) {
+                Optional<Provider<Object>> producer = registry.find(producerKey);
+                if (producer.isPresent()) {
+                    try {
+                        Object value = producer.get().get();
+                        Object unwrapped = unwrapIfTargetAware(value, target, true);
+                        return Optional.ofNullable(unwrapped);
+                    } catch (Exception e) {
+                        return Optional.empty();
+                    }
+                }
+            }
+            
+            DotName typeName = DotName.createSimple(typeArg);
+            LimitedInstance instance = context.getInstance(typeName);
+            
+            if (instance.isUnsatisfied() || instance.isAmbiguous()) {
+                return Optional.empty();
+            }
+            
+            try {
+                Object value = instance.get(context.loadClass(typeName));
+                Object unwrapped = unwrapIfTargetAware(value, target, true);
+                return Optional.ofNullable(unwrapped);
+            } catch (Exception e) {
+                return Optional.empty();
+            }
+        }
+        boolean isOptional = isOptionalInjection(genericType, target);
         Annotation[] qualifiers = key.qualifiers().toArray(new Annotation[0]);
         ProducerCacheKey producerKey = ProducerCacheKey.of(genericType, qualifiers);
         ProducerRegistry registry = context.producerRegistry();
         if (registry != null) {
             Optional<Provider<Object>> producer = registry.find(producerKey);
             if (producer.isPresent()) {
-                return unwrapIfTargetAware(producer.get().get(), target);
+                return unwrapIfTargetAware(producer.get().get(), target, isOptional);
             }
         }
         return unwrapIfTargetAware(
                 context.getInstance(key.type()).get(context.loadClass(key.type())),
-                target
+                target,
+                isOptional
         );
     }
 
@@ -108,11 +147,23 @@ public class InjectionPointResolver {
         return Object.class;
     }
 
-    private static Object unwrapIfTargetAware(Object value, InjectionTarget target) {
+    private static Object unwrapIfTargetAware(Object value, InjectionPoint target, boolean isOptional) {
         if (value instanceof TargetAwareProvider<?> tap && target != null) {
-            return tap.get(target);
+            return tap.get(target, isOptional);
         }
         return value;
+    }
+    
+    private static boolean isOptionalInjection(Type genericType, InjectionPoint target) {
+        if (genericType instanceof ParameterizedType pt) {
+            if (pt.getRawType() == Optional.class) {
+                return true;
+            }
+        }
+        if (target != null && target.hasAnnotation(Nullable.class)) {
+            return true;
+        }
+        return false;
     }
 
     private static Class<?> extractTypeArgument(Type type) {

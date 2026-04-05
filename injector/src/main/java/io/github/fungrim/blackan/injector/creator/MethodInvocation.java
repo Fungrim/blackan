@@ -5,12 +5,10 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
-import io.github.fungrim.blackan.common.cdi.InjectionTarget;
-import io.github.fungrim.blackan.common.cdi.TargetType;
+import io.github.fungrim.blackan.common.cdi.InjectionPoint;
 import io.github.fungrim.blackan.injector.Context;
 import io.github.fungrim.blackan.injector.lookup.InjectionPointLookupKey;
 import jakarta.inject.Inject;
@@ -53,7 +51,7 @@ public class MethodInvocation {
     public void invoke() {
         try {
             method.setAccessible(true);
-            InjectionTarget[] targets = buildTargets(method);
+            InjectionPoint[] targets = buildTargets(method);
             method.invoke(object, InjectionPointResolver.resolveParameters(context, parameters, genericTypes, targets));
             method.setAccessible(false);
         } catch (Exception e) {
@@ -61,16 +59,11 @@ public class MethodInvocation {
         }
     }
 
-    private static InjectionTarget[] buildTargets(Method m) {
+    private static InjectionPoint[] buildTargets(Method m) {
         Parameter[] params = m.getParameters();
-        InjectionTarget[] targets = new InjectionTarget[params.length];
+        InjectionPoint[] targets = new InjectionPoint[params.length];
         for (int i = 0; i < params.length; i++) {
-            targets[i] = new InjectionTarget(
-                    m.getDeclaringClass(),
-                    TargetType.METHOD,
-                    params[i].getName(),
-                    Arrays.stream(params[i].getAnnotations()).toList()
-            );
+            targets[i] = InjectionPoint.of(m, params[i]);
         }
         return targets;
     }

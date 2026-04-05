@@ -4,11 +4,9 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
-import java.util.Arrays;
 import java.util.Optional;
 
-import io.github.fungrim.blackan.common.cdi.InjectionTarget;
-import io.github.fungrim.blackan.common.cdi.TargetType;
+import io.github.fungrim.blackan.common.cdi.InjectionPoint;
 import io.github.fungrim.blackan.injector.Context;
 import io.github.fungrim.blackan.injector.lookup.InjectionPointLookupKey;
 import jakarta.inject.Inject;
@@ -65,7 +63,7 @@ public class ConstructorInvocation<T> {
     public T create() {
         try {
             constructor.setAccessible(true);
-            InjectionTarget[] targets = buildTargets(constructor);
+            InjectionPoint[] targets = buildTargets(constructor);
             T instance = (T) constructor.newInstance(InjectionPointResolver.resolveParameters(context, parameters, genericTypes, targets));
             constructor.setAccessible(false);
             return instance;
@@ -74,16 +72,11 @@ public class ConstructorInvocation<T> {
         }
     }
 
-    private static InjectionTarget[] buildTargets(Constructor<?> ctor) {
+    private static InjectionPoint[] buildTargets(Constructor<?> ctor) {
         Parameter[] params = ctor.getParameters();
-        InjectionTarget[] targets = new InjectionTarget[params.length];
+        InjectionPoint[] targets = new InjectionPoint[params.length];
         for (int i = 0; i < params.length; i++) {
-            targets[i] = new InjectionTarget(
-                    ctor.getDeclaringClass(),
-                    TargetType.CONSTRUCTOR,
-                    params[i].getName(),
-                    Arrays.stream(params[i].getAnnotations()).toList()
-            );
+            targets[i] = InjectionPoint.of(ctor, params[i]); 
         }
         return targets;
     }

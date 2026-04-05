@@ -14,6 +14,8 @@ include(
     'extensions:bootstrap:slf4j:implementation',
     'extensions:bootstrap:smallrye-config:api',
     'extensions:bootstrap:smallrye-config:implementation',
+    'extensions:bootstrap:grok:api',
+    'extensions:bootstrap:grok:implementation',
     'extensions:core:jetty:api',
     'extensions:core:jetty:implementation',
     'extensions:core:jackson:api',

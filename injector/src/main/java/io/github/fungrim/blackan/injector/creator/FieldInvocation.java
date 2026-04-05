@@ -3,12 +3,10 @@ package io.github.fungrim.blackan.injector.creator;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
-import io.github.fungrim.blackan.common.cdi.InjectionTarget;
-import io.github.fungrim.blackan.common.cdi.TargetType;
+import io.github.fungrim.blackan.common.cdi.InjectionPoint;
 import io.github.fungrim.blackan.injector.Context;
 import io.github.fungrim.blackan.injector.lookup.InjectionPointLookupKey;
 import jakarta.inject.Inject;
@@ -46,12 +44,7 @@ public class FieldInvocation {
     public void set() {
         try {
             field.setAccessible(true);
-            InjectionTarget target = new InjectionTarget(
-                    field.getDeclaringClass(),
-                    TargetType.FIELD,
-                    field.getName(),
-                    Arrays.stream(field.getAnnotations()).toList()
-            );
+            InjectionPoint target = InjectionPoint.of(field);
             field.set(object, InjectionPointResolver.resolveInjectionPoint(context, key, field.getGenericType(), target));
             field.setAccessible(false);
         } catch (Exception e) {

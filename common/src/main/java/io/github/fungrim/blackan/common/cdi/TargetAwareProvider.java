@@ -2,6 +2,6 @@ package io.github.fungrim.blackan.common.cdi;
 
 public interface TargetAwareProvider<T> {
 
-    T get(InjectionTarget target);
+    T get(InjectionPoint target, boolean isOptional);
     
 }

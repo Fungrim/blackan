@@ -33,6 +33,8 @@ but never try to edit or create files outside of what is asked for.
 - All services should be named "Service"
 - The Java root packages always starts with "io.github.fungrim.blackan"
 - Always prefer property injection over constructor injection
+- Always write unit tests whenever applicable
+- Always write unit tests using read->greed TDD style
 
 # Project purpose
 
@@ -58,6 +60,9 @@ The framework has a three part bootstrap structure that is reflected in the proj
 - core: These extensions are stable, well used and "belongs to the framework"
 
 All build artifacts should be prefixed "blackan-". 
+
+Important: when making any changes to the project structure or build files, always
+build between each step and after all changes are complete.
 
 # Framework design
 

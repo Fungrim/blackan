@@ -13,6 +13,6 @@ public class TargetAwareProducer {
     @Produces
     @Named("target-aware-greeting")
     public TargetAwareProvider<String> greetingProvider() {
-        return target -> "hello from " + target.parentClass().getSimpleName() + "." + target.targetName();
+        return (target, isOptional) -> "hello from " + target.parentClass().getSimpleName() + "." + target.targetName();
     }
 }

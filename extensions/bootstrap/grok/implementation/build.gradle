@@ -1,0 +1,28 @@
+plugins {
+    id 'java-library'
+    id 'org.kordamp.gradle.jandex' version '2.3.0'
+    id 'maven-publish'
+}
+
+dependencies {
+    api project(':extensions:bootstrap:grok:api')
+    implementation project(':common')
+    implementation project(":extensions:bootstrap:smallrye-config:api")
+    testImplementation project(':injector')
+    testImplementation project(':extensions:bootstrap:smallrye-config:implementation')
+    testImplementation project(':cdi-common')
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            groupId = 'io.github.fungrim.blackan.extension'
+            artifactId = 'blackan-grok-extension'
+            version = "${semver.semver}"
+        }
+    }
+    repositories {
+        mavenLocal()
+    }
+}
