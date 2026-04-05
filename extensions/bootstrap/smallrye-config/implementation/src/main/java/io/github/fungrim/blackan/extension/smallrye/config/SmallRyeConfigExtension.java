@@ -79,7 +79,8 @@ public class SmallRyeConfigExtension implements ContainerExtension {
         ClassLoader cl = Thread.currentThread().getContextClassLoader();
         SmallRyeConfigBuilder builder = new SmallRyeConfigBuilder()
                 .addDefaultSources()
-                .addDefaultInterceptors();
+                .addDefaultInterceptors()
+                .addDiscoveredConverters();
         List<Class<?>> mappingClasses = new ArrayList<>();
         for (DotName name : configMappings) {
             try {
