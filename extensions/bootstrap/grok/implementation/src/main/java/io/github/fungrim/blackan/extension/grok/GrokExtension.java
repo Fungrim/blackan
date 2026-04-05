@@ -9,11 +9,13 @@ import io.github.fungrim.blackan.common.cdi.TargetAwareProvider;
 import io.whatap.grok.api.Grok;
 import io.whatap.grok.api.GrokCompiler;
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.Priority;
 import jakarta.enterprise.inject.Produces;
 import jakarta.enterprise.inject.spi.DeploymentException;
 import jakarta.inject.Inject;
 
 @Extension
+@Priority(5) // Needs to be loaded before config if it is used
 @BootStage(Stage.BOOTSTRAP)
 public class GrokExtension {
 

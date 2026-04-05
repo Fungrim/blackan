@@ -18,10 +18,12 @@ public class Slf4jExtension {
 
     static {
         System.setProperty("slf4j.provider", "ch.qos.logback.classic.spi.LogbackServiceProvider");
+        LoggerFactory.getLogger(Slf4jExtension.class).info("Slf4j extension static init");
     }
 
     @PostConstruct
     public void init() {   
+        LoggerFactory.getLogger(Slf4jExtension.class).debug("Slf4j extension runtime init");
     }
 
     @Produces

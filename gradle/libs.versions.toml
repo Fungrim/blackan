@@ -17,6 +17,7 @@ hibernate = "7.0.0.Final"
 jakarta-data = "1.0.1"
 mysql-connector = "9.1.0"
 java-grok = "0.1.1"
+h2 = "2.3.232"
 
 [libraries]
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
@@ -40,3 +41,4 @@ hibernate-core = { module = "org.hibernate.orm:hibernate-core", version.ref = "h
 jakarta-data-api = { module = "jakarta.data:jakarta.data-api", version.ref = "jakarta-data" }
 mysql-connector = { module = "com.mysql:mysql-connector-j", version.ref = "mysql-connector" }
 java-grok = { module = "io.github.whatap:java-grok", version.ref = "java-grok" }
+h2 = { module = "com.h2database:h2", version.ref = "h2" }

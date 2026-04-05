@@ -9,8 +9,11 @@ dependencies {
     implementation project(':common')
     implementation project(':cdi-common')
     implementation project(':injector')
+    implementation project(':extensions:bootstrap:grok:implementation')
     implementation project(':extensions:bootstrap:smallrye-config:implementation')
     testImplementation project(':injector')
+    testImplementation project(':extensions:bootstrap:slf4j:implementation')
+    testImplementation libs.h2
 }
 
 publishing {
